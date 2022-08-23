@@ -18,11 +18,16 @@ export default async function shell(
   options: any,
   command: Command,
 ) {
-  const tasks = await nixGetTasks([taskPath])
+  const tasks = await nixGetTasks([taskPath], {
+    forDevShell: true,
+  })
 
-  const exactTask = tasks.find(task => task.nixAttributePath === '')
+  const exactTask = tasks.find(task => task.exactRefMatch === true)
 
-  if (exactTask == null) {
+  if (
+    exactTask == null ||
+    tasks.filter(task => task.exactRefMatch === true).length !== 1
+  ) {
     throw new Error(
       'nix-task shell(): Must pass an exact path to a task to use a shell',
     )
@@ -50,7 +55,7 @@ export default async function shell(
   let shellHookScript = task.shellHook
 
   if (shellHookScript === '# __TO_BE_LAZY_EVALUATED__') {
-    const builtLazyTask = await getLazyTask(task.ref, lazyContext)
+    const builtLazyTask = await getLazyTask(task, lazyContext)
 
     await preBuild([builtLazyTask])
 

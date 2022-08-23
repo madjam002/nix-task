@@ -18,7 +18,7 @@
           example = {
             calculate = rec {
               add_3_and_7 = nix-task.lib.mkTask {
-                # dir = ./.;
+                dir = ./.;
                 path = with channels.nixpkgs; [
                   channels.nixpkgs.nodejs-16_x
                 ];
@@ -33,6 +33,8 @@
                   echo "got results"
                   cat $out/homework
                   ${channels.nixpkgs.nodejs-16_x}/bin/node --version
+
+                  echo "got directory"
                 '';
                 shellHook = ''
                   taskRunInBackground echo from shell hook
@@ -76,6 +78,9 @@
 
                   echo "dummy dependency test"
                   echo "${deps.foo.output.test}"
+
+                  echo "flake ref"
+                  echo "$NIX_TASK_FLAKE_PATH"
 
                   echo "got all deps"
                   taskGetDeps

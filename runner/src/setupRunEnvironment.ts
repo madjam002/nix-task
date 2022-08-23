@@ -4,12 +4,11 @@ import readline from 'readline/promises'
 import chalk from 'chalk'
 import * as tmp from 'tmp-promise'
 import { execa, ExecaChildProcess } from 'execa'
-import { Task } from './interfaces'
 import { CANCEL, eventChannel, runSaga, stdChannel } from 'redux-saga'
 import { call, take, race, fork } from 'redux-saga/effects'
 import buildLazyContextForTask from './buildLazyContextForTask'
-
-const findGitRoot = require('find-git-root')
+import { Task } from './interfaces'
+import { getFlakeUrlLocalRepoPath } from './common'
 
 export async function setupRunEnvironmentGlobal() {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
@@ -23,7 +22,7 @@ export async function setupRunEnvironment(
   opts: { forDevShell: boolean; debug?: boolean },
 ) {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
-  const repoRootDir = path.resolve(findGitRoot(flakeRootDir), '../')
+  const flakeLocalRepoPath = getFlakeUrlLocalRepoPath(task.originalFlakeUrl)
   const nixTaskStateDir = path.join(flakeRootDir, '.nix-task')
   const dummyHomeDir = path.join(nixTaskStateDir, 'home')
   const taskDirName = `${task.name}-${task.id.substring(0, 12)}` // show name first so that if the name is truncated it's easy to understand what it is
@@ -54,12 +53,12 @@ export async function setupRunEnvironment(
       if (!task.dir) return null
       if (!task.dir.startsWith('/nix/store')) return task.dir
 
-      if (opts.forDevShell) {
+      if (opts.forDevShell && flakeLocalRepoPath != null) {
         // if setting up environment for dev shell, use the actual repo as the working directory
         // so changes are reflected immediately, rather than the repo source copied into the /nix/store
         const nixStoreSource = task.dir.split('/').slice(0, 4).join('/')
         const pathInNixStoreSource = path.relative(nixStoreSource, task.dir)
-        return path.join(repoRootDir, pathInNixStoreSource)
+        return path.join(flakeLocalRepoPath, pathInNixStoreSource)
       } else {
         // just return copied source in /nix/store (will be read only)
         return task.dir
@@ -75,7 +74,7 @@ export async function setupRunEnvironment(
     TMPDIR: tmpDir.path,
     TEMP: tmpDir.path,
     TEMPDIR: tmpDir.path,
-    NIX_TASK_FLAKE_PATH: flakeRootDir + '#' + task.flakeOutputPath,
+    NIX_TASK_FLAKE_PATH: task.ref,
     out: artifactsDir,
   }
 

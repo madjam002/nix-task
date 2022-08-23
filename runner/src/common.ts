@@ -1,17 +1,18 @@
 import fs from 'fs'
+import url from 'url'
 import path from 'path'
 import readline from 'readline/promises'
 import { current, produce } from 'immer'
 import { execa } from 'execa'
 import * as _ from 'lodash'
-import { NixTaskObject, Task } from './interfaces'
+import { NixFlakeMetadata, NixTaskObject, Task } from './interfaces'
+import { notEmpty } from './ts'
+import chalk from 'chalk'
 
 const getTasksNix = fs.readFileSync(
   path.join(__dirname, 'getTasks.nix'),
   'utf8',
 )
-
-const createRef = (...parts: string[]) => parts.filter(part => !!part).join('.')
 
 export async function nixCurrentSystem() {
   return JSON.parse(
@@ -27,18 +28,50 @@ export async function nixCurrentSystem() {
   )
 }
 
-export async function nixGetTasksForSelector(
-  attributeSelector: string | null = null,
+export async function nixGetTasksFromFlake(
+  flakeUrl: string,
+  flakeTaskAttributes: string[],
 ) {
   let nixOutputRaw
+
+  // remove tasks. prefix from each attribute path
+  // as we pass the tasks attribute to the installable arg for nix eval
+  const chompedTaskPaths = flakeTaskAttributes.map(taskAttr => {
+    if (!taskAttr.startsWith('tasks.')) {
+      throw new Error(
+        'nixGetTasksFromFlake(): All tasks must be part of the tasks attribute on the flake outputs',
+      )
+    }
+    return taskAttr.substring('tasks.'.length)
+  })
 
   try {
     const nixArgs = [
       'eval',
       '--json',
       '--apply',
-      getTasksNix + '\n' + 'tasks: getTasks tasks',
-      attributeSelector != null ? attributeSelector : '.#jobs',
+      getTasksNix +
+        '\n' +
+        `
+        let
+          taskPaths = [ ${chompedTaskPaths
+            .map(attr => `flakeTasks.${attr}`)
+            .join(' ')} ];
+        in
+        flakeTasks: formatTasks (flatten [
+          ${chompedTaskPaths
+            .map(
+              attr => `
+          (collectTasks {
+            output = flakeTasks.${attr};
+            currentPath = ${JSON.stringify('tasks.' + attr)};
+          })
+          `,
+            )
+            .join('\n')}
+        ])
+      `,
+      `${flakeUrl}#tasks`,
     ]
 
     const { stdout } = await execa('nix', nixArgs, { stderr: 'inherit' })
@@ -59,34 +92,35 @@ export async function nixGetTasksForSelector(
   return nixOutput
 }
 
-export function collectTasks(
+function collectTasks(
   output: any,
-  prependNixAttribute: string | null = null,
+  flakePathToUse: string,
+  originalFlakeUrl: string,
+  passedTaskPaths: string[] = [],
 ): Task[] {
   return produce<(Task & NixTaskObject)[]>(output, draft => {
-    for (const job of draft) {
+    for (const task of draft) {
       const allDiscoveredDeps: any = []
 
-      Object.keys(job.deps).forEach(depKey => {
-        const value = job.deps[depKey]
-        const foundJobForDependency =
+      Object.keys(task.deps).forEach(depKey => {
+        const value = task.deps[depKey]
+        const foundTaskForDependency =
           typeof value === 'string'
-            ? draft.find((_job: any) => _job.id === value)
+            ? draft.find((_task: any) => _task.id === value)
             : null
 
-        if (foundJobForDependency) {
-          job.deps[depKey] = foundJobForDependency
-          allDiscoveredDeps.push(job.deps[depKey])
+        if (foundTaskForDependency) {
+          task.deps[depKey] = foundTaskForDependency
+          allDiscoveredDeps.push(task.deps[depKey])
         }
       })
 
-      job.allDiscoveredDeps = allDiscoveredDeps
-      job.ref =
-        prependNixAttribute != null
-          ? createRef(prependNixAttribute, job.nixAttributePath)
-          : createRef('.#jobs', job.nixAttributePath)
-      job.flakeOutputPath = job.ref.split('#')[1] // path to the job from the root of the flake output
-      job.name = job.flakeOutputPath.split('.').at(-1)!
+      task.allDiscoveredDeps = allDiscoveredDeps
+      task.ref = [flakePathToUse, task.flakeAttributePath].join('#')
+      task.exactRefMatch = passedTaskPaths.includes(task.flakeAttributePath)
+      task.name = task.flakeAttributePath.split('.').at(-1)!
+      task.flakePath = flakePathToUse
+      task.originalFlakeUrl = originalFlakeUrl
     }
 
     return draft
@@ -102,16 +136,80 @@ async function rewriteTaskPaths(taskPaths: string[]) {
   })
 }
 
-export async function nixGetTasks(taskPaths: string[]) {
+export async function nixGetTasks(
+  taskPathsIn: string[],
+  opts?: { forDevShell?: boolean },
+) {
+  const taskPaths = await rewriteTaskPaths(taskPathsIn)
+
+  const taskSplitPaths = taskPaths.map(taskPath => {
+    const split = taskPath.split('#')
+    return { flakeUrl: split[0], attribute: split[1] }
+  })
+
+  // of all the provided tasks, get the unique flake refs
+  const flakeUrls = _.uniq(taskSplitPaths.map(taskPath => taskPath.flakeUrl))
+
+  // get flake metadata for each flake ref
+  const flakeMetadata: { [key: string]: NixFlakeMetadata } = {}
+  for (const flakeUrl of flakeUrls) {
+    flakeMetadata[flakeUrl] = await nixGetFlakeMetadata(flakeUrl)
+  }
+
+  // get tasks from each provided flake
   let tasks: Task[] = []
 
-  if (taskPaths != null && taskPaths.length > 0) {
-    // cannot be parallel with Promise.all as nix flakes call git operations sometimes which lock the repo
-    const _taskPaths = await rewriteTaskPaths(taskPaths)
-    for (const taskPath of _taskPaths) {
-      const res = await nixGetTasksForSelector(taskPath)
-      tasks.push(...collectTasks(res, taskPath))
+  for (const flakeUrl of flakeUrls) {
+    const flakeTaskPaths = taskSplitPaths
+      .filter(taskPath => taskPath.flakeUrl === flakeUrl)
+      .map(taskPath => taskPath.attribute)
+
+    const flakeMeta = flakeMetadata[flakeUrl] ?? {}
+
+    // ideally we want to use the flake copied into /nix/store from this point onwards so that
+    // if the user makes any changes to the repo source while nix-task is running, they don't get
+    // reflected or break anything until the next nix-task execution.
+
+    // however, nix can't use a flake nested in another flake when it's stored in /nix/store,
+    // (this code path gets triggered https://github.com/NixOS/nix/blob/4c8210095e7ed8de2eb4789b0ac6f9b4a39e394e/src/libcmd/installables.hh#L73)
+    // so instead we check if a directory is present on the flake, if so use the original source flake directory and print a warning,
+    // else use the flake in /nix/store
+    let flakePathToUse = path.join(
+      ...[flakeMeta.path, flakeMeta.resolved?.dir].filter(notEmpty),
+    )
+    if (opts?.forDevShell && flakeMeta.originalUrl.startsWith('git+file://')) {
+      // always try and resolve flake path to local repo when using a dev shell, as we actually
+      // want changes to the Nix files during nix-task shell to be reflected. This is desired behaviour.
+      const localRepoPath = getFlakeUrlLocalRepoPath(flakeMeta.originalUrl)
+      if (localRepoPath != null) {
+        flakePathToUse = localRepoPath
+      }
+    } else if (
+      flakeMeta.resolved?.dir != null &&
+      flakeMeta.originalUrl.startsWith('git+file://')
+    ) {
+      // TODO we could resort to copying this nested flake into the store as a separate path or something
+      // to avoid this undesirable behaviour?
+      console.warn(
+        chalk.bold.yellow('warning:'),
+        'Flake is in a sub directory of another flake, cannot use immutable source from /nix/store',
+      )
+      console.warn(
+        chalk.bold.yellow('warning:'),
+        'This means any changes to the repo source during task execution could break or affect execution',
+      )
+      flakePathToUse = flakeUrl
     }
+
+    const res = await nixGetTasksFromFlake(flakePathToUse, flakeTaskPaths)
+    tasks.push(
+      ...collectTasks(
+        res,
+        flakePathToUse,
+        flakeMeta.originalUrl,
+        flakeTaskPaths,
+      ),
+    )
   }
 
   return tasks
@@ -162,10 +260,17 @@ export async function preBuild(tasks: Task[]) {
   await proc
 }
 
-export async function getLazyTask(taskPath: string, ctx: any) {
+export async function getLazyTask(task: Task, ctx: any) {
   let nixOutputRaw
 
   try {
+    if (!task.flakeAttributePath.startsWith('tasks.')) {
+      throw new Error(
+        'getLazyTask(): Expected task attribute to start with tasks.',
+      )
+    }
+    const chompedTaskPath = task.flakeAttributePath.substring('tasks.'.length)
+
     const nixArgs = [
       'eval',
       '--no-update-lock-file',
@@ -175,11 +280,16 @@ export async function getLazyTask(taskPath: string, ctx: any) {
       getTasksNix +
         '\n' +
         `
-        tasks: getTasks (tasks (builtins.fromJSON ${JSON.stringify(
+        flakeTasks: formatTasks(
+          collectTasks {
+            output = flakeTasks.${chompedTaskPath}.getLazy (builtins.fromJSON ${JSON.stringify(
           JSON.stringify(ctx),
-        )}))
+        )});
+            currentPath = ${JSON.stringify('tasks.' + chompedTaskPath)};
+          }
+        )
       `,
-      taskPath + '.getLazy',
+      `${task.flakePath}#tasks`,
     ]
 
     const { stdout } = await execa('nix', nixArgs, { stderr: 'inherit' })
@@ -197,7 +307,7 @@ export async function getLazyTask(taskPath: string, ctx: any) {
 
   const nixOutput: any = JSON.parse(nixOutputRaw as string)
 
-  return collectTasks(nixOutput)[0]
+  return collectTasks(nixOutput, task.flakePath, task.originalFlakeUrl, [])[0]
 }
 
 export async function callTaskGetOutput(
@@ -238,4 +348,35 @@ export async function callTaskGetOutput(
   const nixOutput: any = JSON.parse(nixOutputRaw as string)
 
   return nixOutput
+}
+
+async function nixGetFlakeMetadata(flakeUrl: string) {
+  let nixOutputRaw
+
+  try {
+    const nixArgs = ['flake', 'metadata', '--json', flakeUrl]
+
+    const { stdout } = await execa('nix', nixArgs, { stderr: 'inherit' })
+
+    nixOutputRaw = stdout
+  } catch (ex) {
+    if (ex.name === 'MaxBufferError') {
+      console.error('Max buffer exceeded, circular dependency somewhere?')
+      process.exit(1)
+    }
+
+    console.error(ex.stderr)
+    process.exit(1)
+  }
+
+  const nixOutput: any = JSON.parse(nixOutputRaw as string)
+
+  return nixOutput
+}
+
+export function getFlakeUrlLocalRepoPath(flakeUrl: string) {
+  const parsed = url.parse(flakeUrl)
+  if (parsed.protocol !== 'git+file:') return null
+
+  return parsed.pathname
 }

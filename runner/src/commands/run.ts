@@ -28,20 +28,28 @@ export default async function run(
 ) {
   const tasks = await nixGetTasks(taskPaths)
 
+  if (options.debug) {
+    console.log('got tasks', tasks)
+  }
+
   const onlyTask =
     options.only === true
-      ? tasks.find(task => task.nixAttributePath === '')
+      ? tasks.find(task => task.exactRefMatch === true)
       : null
 
-  if (options.only === true && onlyTask == null) {
+  if (
+    options.only === true &&
+    (onlyTask == null ||
+      tasks.filter(task => task.exactRefMatch === true).length !== 1)
+  ) {
     throw new Error(
-      'nix-task run(): Must pass an exact path to a task when using --only',
+      'nix-task run(): Must pass an exact path to a single task when using --only',
     )
   }
 
   const sortedTasks = onlyTask
     ? [[onlyTask.id]]
-    : calculateBatchedRunOrder(tasks, taskPaths)
+    : calculateBatchedRunOrder(tasks)
 
   if (options.graph) {
     console.log(
@@ -96,15 +104,15 @@ export default async function run(
   }
 }
 
-function calculateBatchedRunOrder(jobs: Task[], selectedJobPaths: string[]) {
+function calculateBatchedRunOrder(tasks: Task[]) {
   const dependencyGraph: any = {}
 
-  jobs.forEach(job => {
-    if (!dependencyGraph[job.id]) dependencyGraph[job.id] = []
+  tasks.forEach(task => {
+    if (!dependencyGraph[task.id]) dependencyGraph[task.id] = []
 
-    job.allDiscoveredDeps.forEach(dep => {
+    task.allDiscoveredDeps.forEach(dep => {
       if (!dependencyGraph[dep.id]) dependencyGraph[dep.id] = []
-      dependencyGraph[dep.id].push(job.id)
+      dependencyGraph[dep.id].push(task.id)
     })
   })
 
@@ -152,7 +160,7 @@ function* runTask(
   let runScript = task.run
 
   if (task.run === '# __TO_BE_LAZY_EVALUATED__') {
-    const builtLazyTask = yield call(() => getLazyTask(task.ref, lazyContext))
+    const builtLazyTask = yield call(() => getLazyTask(task, lazyContext))
 
     yield call(() => preBuild([builtLazyTask]))
 

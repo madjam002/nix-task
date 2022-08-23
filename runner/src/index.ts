@@ -8,17 +8,17 @@ program.version(require('../package.json').version)
 program
 // program.option(
 //   '-K, --keep <env>',
-//   'pass through an environment variable to the job sandbox',
+//   'pass through an environment variable to the task sandbox',
 //   collect,
 //   [],
 // )
 
 // program
-// program.option('--dry-run', 'run jobs with dry run flag passed in', false)
+// program.option('--dry-run', 'run tasks with dry run flag passed in', false)
 
 // program.option(
 //   '-J, --concurrency <concurrency>',
-//   'maximum number of jobs to run at once',
+//   'maximum number of tasks to run at once',
 //   parseInt,
 //   4,
 // )
@@ -27,7 +27,7 @@ program
   .command('run <tasks...>')
   .option(
     '--only',
-    "only run the specific jobs passed on the command line, ignoring all dependencies. Dependencies which aren't cached will error.",
+    "only run the specific tasks passed on the command line, ignoring all dependencies. Dependencies which aren't cached will error.",
     false,
   )
   .option(

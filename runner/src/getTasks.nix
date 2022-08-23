@@ -46,13 +46,13 @@ let
         inherit id;
         inherit __type;
         getLazy = null;
-        nixAttributePath = currentPath;
+        flakeAttributePath = currentPath;
         deps = depsWithDerivations taskDefinition.deps;
-        storeDependencies =
+        storeDependencies = uniquePredicate (a: b: a != b) (
           (map (pathItem: if (hasAttr "drvPath" pathItem) then pathItem.drvPath else pathItem) taskDefinition.path)
           ++ (getDrvDependenciesFromString taskDefinition.run)
           ++ (getDrvDependenciesFromString taskDefinition.shellHook)
-          ;
+        );
         inherit dir;
         inherit path;
         inherit artifacts;
@@ -83,14 +83,11 @@ let
       in [x] ++ uniquePredicate pred (filter (y: pred x y) list);
 
   # sort by shortest path to step
-  sortTasks = a: b: (builtins.stringLength a.nixAttributePath) < (builtins.stringLength b.nixAttributePath);
+  sortTasks = a: b: (builtins.stringLength a.flakeAttributePath) < (builtins.stringLength b.flakeAttributePath);
 
-  getTasks = tasks:
+  formatTasks = collectedTasks:
     let
-      orderedTasks = sort sortTasks (collectTasks {
-        output = tasks;
-        currentPath = "";
-      });
+      orderedTasks = sort sortTasks (collectedTasks);
       taskDefinitions = uniquePredicate (a: b: a.id != b.id) orderedTasks;
     in
       taskDefinitions;
