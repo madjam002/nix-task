@@ -1,5 +1,5 @@
-{ lib, stdenv }:
+{ lib }:
 
 {
-  mkTask = import ./mkTask.nix { inherit lib; inherit stdenv; };
+  mkTask = import ./mkTask.nix { inherit lib; };
 }

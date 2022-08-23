@@ -9,7 +9,6 @@
   outputs = inputs@{ self, nixpkgs, utils }:
     let
       nixpkgsLib = nixpkgs.lib;
-      nixpkgsStdEnv = nixpkgs.legacyPackages.x86_64-linux.stdenv;
       flake = utils.lib.mkFlake {
         inherit self inputs;
 
@@ -21,6 +20,6 @@
       };
     in
     flake // {
-      lib = import ./nix/lib { lib = nixpkgsLib; stdenv = nixpkgsStdEnv; };
+      lib = import ./nix/lib { lib = nixpkgsLib; };
     };
 }

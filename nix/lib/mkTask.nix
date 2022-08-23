@@ -1,4 +1,4 @@
-{ lib, stdenv }:
+{ lib }:
 
 with builtins;
 with lib;
