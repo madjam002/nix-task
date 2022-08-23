@@ -8,7 +8,7 @@ It is not a replacement of CI/CD runners like GitLab CI or GitHub Actions, and i
 
 ## Examples
 
-See [examples/nixMathHomework/flake.nix]() as an example.
+See [examples/nixMathHomework/flake.nix](examples/nixMathHomework/flake.nix) as an example.
 
 ## Documentation
 
