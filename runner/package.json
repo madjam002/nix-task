@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "@types/fs-extra": "^9.0.13",
+    "@types/lodash": "^4.14.184",
+    "@types/node": "^18.7.8",
+    "batching-toposort": "^1.2.0",
+    "chalk": "^5.0.1",
+    "commander": "^9.4.0",
+    "execa": "^6.1.0",
+    "find-git-root": "^1.0.4",
+    "fs-extra": "^10.1.0",
+    "immer": "^9.0.15",
+    "lodash": "^4.17.21",
+    "redux-saga": "^1.2.1",
+    "tmp-promise": "^3.0.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.15.5",
+    "esbuild-register": "^3.3.3"
+  }
+}
