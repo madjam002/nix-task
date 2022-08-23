@@ -51,6 +51,10 @@ program
     'show some additional logs to help with debugging task runs',
     false,
   )
+  .option(
+    '--no-shell-hook',
+    'disable running shell hooks for the specified task',
+  )
   .description(
     'open an interactive shell in the context of a task (similar to nix shell)',
   )

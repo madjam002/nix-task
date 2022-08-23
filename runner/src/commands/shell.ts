@@ -52,9 +52,9 @@ export default async function shell(
     debug: options.debug,
   })
 
-  let shellHookScript = task.shellHook
+  let shellHookScript = options.shellHook ? task.shellHook : ''
 
-  if (shellHookScript === '# __TO_BE_LAZY_EVALUATED__') {
+  if (options.shellHook && shellHookScript === '# __TO_BE_LAZY_EVALUATED__') {
     const builtLazyTask = await getLazyTask(task, lazyContext)
 
     await preBuild([builtLazyTask])
@@ -105,6 +105,9 @@ set +e
 
     await proc
   } catch (ex) {
+    if (ex?.code === 'ENOENT') {
+      throw ex
+    }
   } finally {
     await Promise.all([rcTmp.cleanup(), tmpDir.cleanup()])
   }

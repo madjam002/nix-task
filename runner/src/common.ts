@@ -182,7 +182,7 @@ export async function nixGetTasks(
       // want changes to the Nix files during nix-task shell to be reflected. This is desired behaviour.
       const localRepoPath = getFlakeUrlLocalRepoPath(flakeMeta.originalUrl)
       if (localRepoPath != null) {
-        flakePathToUse = localRepoPath
+        flakePathToUse = localRepoPath.flakeDirectory
       }
     } else if (
       flakeMeta.resolved?.dir != null &&
@@ -377,6 +377,14 @@ async function nixGetFlakeMetadata(flakeUrl: string) {
 export function getFlakeUrlLocalRepoPath(flakeUrl: string) {
   const parsed = url.parse(flakeUrl)
   if (parsed.protocol !== 'git+file:') return null
+  if (!parsed.pathname) return null
 
-  return parsed.pathname
+  const params = new URLSearchParams(parsed.query ?? '')
+  const dir = params.get('dir')
+
+  return {
+    repoRoot: parsed.pathname,
+    flakeDirectory:
+      dir != null ? path.join(parsed.pathname, dir) : parsed.pathname,
+  }
 }
