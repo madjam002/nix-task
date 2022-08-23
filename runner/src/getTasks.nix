@@ -82,7 +82,7 @@ let
         x = head list;
       in [x] ++ uniquePredicate pred (filter (y: pred x y) list);
 
-  # sort by shortest path to step
+  # sort by shortest path to task
   sortTasks = a: b: (builtins.stringLength a.flakeAttributePath) < (builtins.stringLength b.flakeAttributePath);
 
   formatTasks = collectedTasks:

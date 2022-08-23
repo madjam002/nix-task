@@ -117,8 +117,8 @@ function calculateBatchedRunOrder(tasks: Task[]) {
   })
 
   // TODO while the batching is nice to look at, it's not the most efficient way to do this
-  // e.g take two steps, and another step which depends on step 1. If step 2 takes ages to complete
-  // batching will cause step 3 to wait until step 2 has finished even though there's no explicit dependency.
+  // e.g take two tasks, and another task which depends on task 1. If task 2 takes ages to complete
+  // batching will cause task 3 to wait until task 2 has finished even though there's no explicit dependency.
   const runOrder: string[][] = batchingToposort(dependencyGraph)
 
   return runOrder
