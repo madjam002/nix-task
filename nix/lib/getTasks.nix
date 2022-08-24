@@ -1,3 +1,6 @@
+# This file can't import anything as we include the contents of this file
+# directly in nix eval --apply arguments (see how this file is included in runner/src/common.ts)
+
 with builtins;
 
 let
@@ -33,16 +36,16 @@ let
     if reuseWorkingDirectory != null then reuseWorkingDirectory.id else null;
 
 
-  collectMaybeTask = { taskDefinition, currentPath }:
+  collectMaybeTask = { taskDefinition, currentPath, opts }:
     if isTask taskDefinition then
-      collectTask { inherit taskDefinition; inherit currentPath; }
+      collectTask { inherit taskDefinition; inherit currentPath; inherit opts; }
     else
-      collectTasks { output = taskDefinition; inherit currentPath; }
+      collectTasks { output = taskDefinition; inherit currentPath; inherit opts; }
     ;
 
-  collectTask = { taskDefinition, currentPath }:
+  collectTask = { taskDefinition, currentPath, opts }:
     let
-      task = with taskDefinition; {
+      task = with taskDefinition; (if (hasAttr "includeExtraAttributes" opts) && opts.includeExtraAttributes == true then taskDefinition else {}) // {
         inherit id;
         inherit __type;
         getLazy = null;
@@ -60,17 +63,17 @@ let
         inherit shellHook;
         hasGetOutput = getOutput != null && isFunction getOutput;
       };
-      depsTasks = flatten (mapAttrsToList (key: value: collectMaybeTask { taskDefinition = value; currentPath = "${if currentPath != "" then "${currentPath}." else ""}deps.${key}"; }) taskDefinition.deps);
+      depsTasks = flatten (mapAttrsToList (key: value: collectMaybeTask { taskDefinition = value; inherit opts; currentPath = "${if currentPath != "" then "${currentPath}." else ""}deps.${key}"; }) taskDefinition.deps);
     in
     [task] ++ depsTasks;
 
   isTask = maybeTask: (isAttrs maybeTask) && (hasAttr "__type" maybeTask) && maybeTask.__type == "task";
 
-  collectTasks = { output, currentPath }:
+  collectTasks = { output, currentPath, opts ? {} }:
     if isTask output then
-      (collectTask { taskDefinition = output; inherit currentPath; })
+      (collectTask { taskDefinition = output; inherit currentPath; inherit opts; })
     else if isAttrs output then
-      concatMap (attrName: collectMaybeTask { taskDefinition = output.${attrName}; currentPath = if currentPath != "" then "${currentPath}.${attrName}" else attrName; }) (attrNames output)
+      concatMap (attrName: collectMaybeTask { taskDefinition = output.${attrName}; inherit opts; currentPath = if currentPath != "" then "${currentPath}.${attrName}" else attrName; }) (attrNames output)
     else
       [];
 
@@ -91,4 +94,16 @@ let
       taskDefinitions = uniquePredicate (a: b: a.id != b.id) orderedTasks;
     in
       taskDefinitions;
+
+  getAllTasks = tasks:
+    formatTasks (collectTasks {
+      output = tasks;
+      currentPath = "";
+      opts.includeExtraAttributes = true; # include all attributes as getAllTasks shouldn't be serialised to JSON so functions don't matter
+    });
 in
+# __beginExports__
+{
+  inherit isTask;
+  inherit getAllTasks;
+}

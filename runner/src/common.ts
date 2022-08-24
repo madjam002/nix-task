@@ -9,9 +9,13 @@ import { NixFlakeMetadata, NixTaskObject, Task } from './interfaces'
 import { notEmpty } from './ts'
 import chalk from 'chalk'
 
-const getTasksNix = fs.readFileSync(
-  path.join(__dirname, 'getTasks.nix'),
+let getTasksNix = fs.readFileSync(
+  path.join(__dirname, '../../nix/lib/getTasks.nix'),
   'utf8',
+)
+getTasksNix = getTasksNix.substring(
+  0,
+  getTasksNix.lastIndexOf('# __beginExports__'),
 )
 
 export async function nixCurrentSystem() {
