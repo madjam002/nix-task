@@ -59,3 +59,9 @@ Runs `<command>` when this task finishes either successfully or on error.
 #### `taskGetDeps`
 
 Dumps the deps and their outputs as JSON.
+
+## License
+
+Licensed under the MIT License.
+
+View the full license [here](https://raw.githubusercontent.com/madjam002/nix-task/master/LICENSE).
