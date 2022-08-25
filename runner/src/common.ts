@@ -99,6 +99,7 @@ export async function nixGetTasksFromFlake(
 function collectTasks(
   output: any,
   flakePathToUse: string,
+  resolvedOriginalFlakeUrl: string,
   originalFlakeUrl: string,
   passedTaskPaths: string[] = [],
 ): Task[] {
@@ -124,7 +125,18 @@ function collectTasks(
       task.exactRefMatch = passedTaskPaths.includes(task.flakeAttributePath)
       task.name = task.flakeAttributePath.split('.').at(-1)!
       task.flakePath = flakePathToUse
+      task.resolvedOriginalFlakeUrl = resolvedOriginalFlakeUrl
       task.originalFlakeUrl = originalFlakeUrl
+
+      // strip the .tasks.<system> prefix from the attribute (for display purposes only)
+      task.flakePrettyAttributePath = task.flakeAttributePath.replace(
+        /^(tasks\.[\w\-_]+\.)/,
+        '',
+      )
+      task.prettyRef = [
+        task.originalFlakeUrl,
+        task.flakePrettyAttributePath,
+      ].join('#')
     }
 
     return draft
@@ -211,6 +223,7 @@ export async function nixGetTasks(
         res,
         flakePathToUse,
         flakeMeta.originalUrl,
+        flakeUrl,
         flakeTaskPaths,
       ),
     )
@@ -311,7 +324,13 @@ export async function getLazyTask(task: Task, ctx: any) {
 
   const nixOutput: any = JSON.parse(nixOutputRaw as string)
 
-  return collectTasks(nixOutput, task.flakePath, task.originalFlakeUrl, [])[0]
+  return collectTasks(
+    nixOutput,
+    task.flakePath,
+    task.resolvedOriginalFlakeUrl,
+    task.originalFlakeUrl,
+    [],
+  )[0]
 }
 
 export async function callTaskGetOutput(

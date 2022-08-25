@@ -16,7 +16,10 @@ export interface Task {
   flakeAttributePath: string
   exactRefMatch: boolean // true if the path to this task was passed exactly to the command line
   flakePath: string // path to the resolved flake in the nix store, or original repo path if not supported
-  originalFlakeUrl: string // original flake url
+  resolvedOriginalFlakeUrl: string // original flake url (resolved to an absolute path)
+  originalFlakeUrl: string // original flake url as-is originally passed to nix-task CLI (shouldn't really be used apart from display purposes)
+  flakePrettyAttributePath: string // flakeAttributePath with the .tasks.<system> chomped off the front, should only be used for display purposes
+  prettyRef: string
   deps: {
     [name: string]: any
   }

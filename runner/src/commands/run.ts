@@ -55,7 +55,9 @@ export default async function run(
     console.log(
       JSON.stringify(
         sortedTasks.map(group =>
-          group.map(taskId => tasks.find(task => task.id === taskId)?.name),
+          group.map(
+            taskId => tasks.find(task => task.id === taskId)?.prettyRef,
+          ),
         ),
         null,
         2,
@@ -130,7 +132,7 @@ function* runTask(
 ): any {
   console.log()
 
-  const headerPrefix = ' Running ' + task.name + ' '
+  const headerPrefix = ' Running ' + task.prettyRef + ' '
 
   console.log(
     chalk.yellow('──') +

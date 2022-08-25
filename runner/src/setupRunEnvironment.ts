@@ -23,7 +23,7 @@ export async function setupRunEnvironment(
 ) {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
   const flakeLocalRepoPath = getFlakeUrlLocalRepoPath(
-    task.originalFlakeUrl,
+    task.resolvedOriginalFlakeUrl,
   )?.repoRoot
   const nixTaskStateDir = path.join(flakeRootDir, '.nix-task')
   const dummyHomeDir = path.join(nixTaskStateDir, 'home')
