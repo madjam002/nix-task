@@ -47,6 +47,8 @@ export default async function shell(
     outJSONFile,
     lazyContext,
     bashStdlib,
+    spawnCmd,
+    spawnArgs,
   } = await setupRunEnvironment(task, {
     forDevShell: true,
     debug: options.debug,
@@ -86,18 +88,15 @@ set +e
   )
 
   try {
-    const proc = execa(
-      process.env.PKG_PATH_BASH! + '/bin/bash',
-      ['--rcfile', rcTmp.path],
-      {
-        stdio: ['inherit', 'inherit', 'inherit', undefined, 'pipe'],
-        cwd: workingDir,
-        env: {
-          ...env,
-        },
-        extendEnv: false,
+    const proc = execa(spawnCmd, [...spawnArgs, '--rcfile', rcTmp.path], {
+      stdio: ['inherit', 'inherit', 'inherit', undefined, 'pipe'],
+      cwd: workingDir,
+      env: {
+        ...env,
+        HOME: process.env.HOME,
       },
-    )
+      extendEnv: false,
+    })
 
     const outputRef = { current: null }
 

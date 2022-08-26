@@ -155,6 +155,8 @@ function* runTask(
     outJSONFile,
     lazyContext,
     bashStdlib,
+    spawnCmd,
+    spawnArgs,
   } = yield call(() =>
     setupRunEnvironment(task, { forDevShell: false, debug: opts.debug }),
   )
@@ -171,8 +173,14 @@ function* runTask(
 
   try {
     const proc = execa(
-      process.env.PKG_PATH_BASH! + '/bin/bash',
-      ['--norc', '--noprofile', '-c', bashStdlib + '\n' + runScript],
+      spawnCmd,
+      [
+        ...spawnArgs,
+        '--norc',
+        '--noprofile',
+        '-c',
+        bashStdlib + '\n' + runScript,
+      ],
       {
         stdio: [
           opts.interactive ? 'inherit' : 'ignore',

@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs-extra'
+import os from 'os'
 import readline from 'readline/promises'
 import chalk from 'chalk'
 import * as tmp from 'tmp-promise'
@@ -9,6 +10,7 @@ import { call, take, race, fork } from 'redux-saga/effects'
 import buildLazyContextForTask from './buildLazyContextForTask'
 import { Task } from './interfaces'
 import { getFlakeUrlLocalRepoPath } from './common'
+import config from './config'
 
 export async function setupRunEnvironmentGlobal() {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
@@ -88,6 +90,16 @@ export async function setupRunEnvironment(
     console.log('task lazyContext', lazyContext)
   }
 
+  let spawnCmd = process.env.PKG_PATH_BASH! + '/bin/bash'
+  let spawnArgs: string[] = []
+
+  if (config?.experimental?.taskUserNamespaces && os.platform() === 'linux') {
+    // if running on linux, run the command in a lightweight user namespace
+    // so that mounts can be created without root
+    spawnArgs = ['--map-root-user', '--mount', spawnCmd]
+    spawnCmd = 'unshare'
+  }
+
   return {
     workingDir,
     dummyHomeDir,
@@ -97,6 +109,8 @@ export async function setupRunEnvironment(
     env,
     lazyContext,
     bashStdlib: getBashStdlib({ lazyContext }),
+    spawnCmd,
+    spawnArgs,
   }
 }
 
