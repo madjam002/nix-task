@@ -18,6 +18,7 @@
           example = {
             calculate = rec {
               add_3_and_7 = nix-task.lib.mkTask {
+                stableId = [ "add_3_and_7" ];
                 dir = ./.;
                 path = with channels.nixpkgs; [
                   channels.nixpkgs.nodejs-16_x
@@ -43,7 +44,7 @@
                 '';
               };
               multiply_by_9 = nix-task.lib.mkTask {
-                id = "multiply_by_9";
+                stableId = "multiply_by_9";
                 deps = { inherit add_3_and_7; };
                 path = with channels.nixpkgs; [
                   nodejs
@@ -64,7 +65,7 @@
                 };
               };
               display_result = nix-task.lib.mkTask {
-                id = "display_result";
+                stableId = [ "display_result" ];
                 deps = {
                   inherit multiply_by_9;
                   foo.output.test = "blah";
@@ -88,6 +89,7 @@
               };
 
               test_separate = nix-task.lib.mkTask {
+                stableId = [ "test_separate" ];
                 run = ''
                   echo "hello world"
                 '';

@@ -6,7 +6,7 @@ with lib;
 let
 in
 opts@{
-  id ? null,
+  stableId ? null,
   dir ? null,
   path ? [],
   deps ? {},
@@ -19,33 +19,13 @@ let
   dirString = if dir == null then null else toString dir;
   initialRunString = if (isString run) then run else "# __TO_BE_LAZY_EVALUATED__";
   initialShellHookString = if (isString shellHook) then shellHook else "# __TO_BE_LAZY_EVALUATED__";
-
-  dirStringForHash =
-    # if dir is a /nix/store path, remove the /nix/store/**-** prefix as otherwise
-    # the id will change every time a file in the repo is updated as a new source store path
-    # will be created
-    let
-      splitPath = splitString "/" dirString;
-    in
-    if (elemAt splitPath 1) == "nix" && (elemAt splitPath 2) == "store" then
-      concatStringsSep "/" (sublist 4 99 splitPath)
-    else
-      dirString;
-
-  idHashInputs = [
-    (if (isString run) then "" else (
-      if id != null then id
-      else throw "mkTask(): id: must be provided if run: is a function"
-    ))
-    (if dirString != null then dirStringForHash else "")
-    path
-    initialRunString
-    initialShellHookString
-  ];
-  hash = hashString "sha256" (toJSON idHashInputs);
+  id = hashString "sha256" (toJSON stableId);
 in
+if stableId == null || stableId == [] then
+  throw "mkTask(): stableId must be provided and be unique for each task"
+else
 {
-  id = hash;
+  inherit id;
   __type = "task";
   inherit path;
   inherit deps;
@@ -57,7 +37,7 @@ in
 
   getLazy = ctx:
     {
-      id = hash;
+      inherit id;
        __type = "task";
       inherit path;
       inherit deps;
