@@ -108,15 +108,32 @@ export async function setupRunEnvironment(
     tmpDir,
     env,
     lazyContext,
-    bashStdlib: getBashStdlib({ lazyContext }),
+    bashStdlib: getBashStdlib({ lazyContext, dummyHomeDir }),
     spawnCmd,
     spawnArgs,
   }
 }
 
-function getBashStdlib({ lazyContext }: { lazyContext?: any }) {
+function getBashStdlib({
+  lazyContext,
+  dummyHomeDir,
+}: {
+  lazyContext?: any
+  dummyHomeDir: string
+}) {
+  let experimentalTaskUserNamespacesSetup = ''
+
+  if (config?.experimental?.taskUserNamespaces && os.platform() === 'linux') {
+    // bind mount the root home directory to the temp home directory that we've created for this task
+    experimentalTaskUserNamespacesSetup = `
+${process.env.PKG_PATH_UTIL_LINUX}/bin/mount --bind ${dummyHomeDir} /root
+    `.trim()
+  }
+
   return `
 set -e
+
+${experimentalTaskUserNamespacesSetup}
 
 function taskSetOutput {
   ${process.env.PKG_PATH_JQ}/bin/jq --null-input -cM \

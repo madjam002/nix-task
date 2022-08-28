@@ -21,5 +21,6 @@ mkShell {
     export PKG_PATH_COREUTILS="${pkgs.coreutils}"
     export PKG_PATH_JQ="${pkgs.jq}"
     export PKG_PATH_NODEJS="${pkgs.nodejs-18_x}"
+    export PKG_PATH_UTIL_LINUX="${pkgs.util-linux}"
   '';
 }
