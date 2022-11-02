@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs-extra'
 import os from 'os'
-import readline from 'readline/promises'
+import readline from 'node:readline/promises'
 import chalk from 'chalk'
 import * as tmp from 'tmp-promise'
 import { execa, ExecaChildProcess } from 'execa'

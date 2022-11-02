@@ -1,7 +1,7 @@
 import fs from 'fs'
 import url from 'url'
 import path from 'path'
-import readline from 'readline/promises'
+import readline from 'node:readline/promises'
 import { current, produce } from 'immer'
 import { execa } from 'execa'
 import * as _ from 'lodash'
@@ -9,14 +9,7 @@ import { NixFlakeMetadata, NixTaskObject, Task } from './interfaces'
 import { notEmpty } from './ts'
 import chalk from 'chalk'
 
-let getTasksNix = fs.readFileSync(
-  path.join(__dirname, '../../nix/lib/getTasks.nix'),
-  'utf8',
-)
-getTasksNix = getTasksNix.substring(
-  0,
-  getTasksNix.lastIndexOf('# __beginExports__'),
-)
+let getTasksNix = require('../getTasks.nix')
 
 export async function nixCurrentSystem() {
   return JSON.parse(

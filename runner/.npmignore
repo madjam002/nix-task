@@ -1,0 +1,6 @@
+.yarn
+*.nix
+build.js
+src
+tsconfig.json
+yarn.lock

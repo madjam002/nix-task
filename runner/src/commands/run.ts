@@ -214,9 +214,12 @@ function* runTask(
     }
 
     if (outputRef.current != null) {
+      // write/overwrite new out.json file
       yield call(() =>
         fs.writeFile(outJSONFile, JSON.stringify(outputRef.current, null, 2)),
       )
+      // clean up any old out.json files for this task ID that might use obsolete name prefixes
+      // TODO!
     }
 
     return true

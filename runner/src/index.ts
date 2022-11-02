@@ -1,4 +1,4 @@
-import commander from 'commander'
+import * as commander from 'commander'
 
 const program = new commander.Command()
 const collect = (value: string, previous: string[]) => previous.concat([value])
