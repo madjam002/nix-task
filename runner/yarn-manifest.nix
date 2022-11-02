@@ -524,7 +524,9 @@ let
       reference = "npm:0.15.12";
       linkType = "HARD";
       outputName = "esbuild-linux-64-0.15.12-1259cf7b90";
-      outputHash = "";
+      outputHashByPlatform = {
+        "x86_64-linux" = "sha512-kIMptZse6jmOwsJSvDcFMdx7YzcIxbs+fSugMr6uzwtzdUJ2CM8o4Ml/aPX9nHEkWLeYAJx3ZShODG1Wqeo8CA==";
+      };
       shouldBeUnplugged = true;
       installCondition = stdenv: (stdenv.isLinux) && (stdenv.isx86_64);
       flatName = "esbuild-linux-64";
@@ -719,6 +721,7 @@ let
       outputName = "esbuild-0.15.12-0d999cf382";
       outputHashByPlatform = {
         "aarch64-darwin" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
+        "x86_64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
       };
       shouldBeUnplugged = true;
       flatName = "esbuild";
