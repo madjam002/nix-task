@@ -17,6 +17,12 @@ let
       concatMap (collect pred) (attrValues attrs)
     else
       [];
+  filterAttrs =
+    pred: set:
+    listToAttrs (concatMap (name: let v = set.${name}; in if pred name v then [(nameValuePair name v)] else []) (attrNames set));
+  nameValuePair =
+    name: value:
+    { inherit name value; };
 
   ###
 
@@ -28,9 +34,13 @@ let
     in
     attrNames ctx;
 
-  depsWithDerivations = deps:
+  cleanNonTaskDep = nonTaskDep: if (isAttrs nonTaskDep) then (filterAttrs (n: v: n == "output") nonTaskDep) else {};
+
+  depsWithDerivations = currentPath: deps:
     mapAttrs (name: value:
-      if (isTask value) then value.id else value
+      if (isTask value) then value.id
+      else if (isAttrSetWithTaskOutput value) then { __type = "taskOutput"; flakeAttributePath = "${currentPath}.${name}.output"; deps = depsWithDerivations "${currentPath}.${name}.output.deps" value.output.deps; }
+      else (cleanNonTaskDep value)
     ) deps;
   reuseWorkingDirectoryDerivation = reuseWorkingDirectory:
     if reuseWorkingDirectory != null then reuseWorkingDirectory.id else null;
@@ -39,6 +49,9 @@ let
   collectMaybeTask = { taskDefinition, currentPath, opts }:
     if isTask taskDefinition then
       collectTask { inherit taskDefinition; inherit currentPath; inherit opts; }
+    else if (isAttrSetWithTaskOutput taskDefinition) then
+      collectTasks { output = taskDefinition.output.deps; currentPath = "${currentPath}.output.deps"; inherit opts; }
+    else if (isAttrs taskDefinition) && (hasAttr "_nixTaskDontRecurseTasks" taskDefinition) && (taskDefinition._nixTaskDontRecurseTasks) then []
     else
       collectTasks { output = taskDefinition; inherit currentPath; inherit opts; }
     ;
@@ -50,7 +63,7 @@ let
         inherit __type;
         getLazy = null;
         flakeAttributePath = currentPath;
-        deps = depsWithDerivations taskDefinition.deps;
+        deps = depsWithDerivations "${currentPath}.deps" taskDefinition.deps;
         storeDependencies = uniquePredicate (a: b: a != b) (
           (map (pathItem: if (hasAttr "drvPath" pathItem) then pathItem.drvPath else pathItem) taskDefinition.path)
           ++ (getDrvDependenciesFromString taskDefinition.run)
@@ -68,6 +81,10 @@ let
     [task] ++ depsTasks;
 
   isTask = maybeTask: (isAttrs maybeTask) && (hasAttr "__type" maybeTask) && maybeTask.__type == "task";
+
+  isAttrSetWithTaskOutput = maybeTaskOutput:
+    (isAttrs maybeTaskOutput) && (hasAttr "output" maybeTaskOutput) &&
+    (isAttrs maybeTaskOutput.output) && (hasAttr "__type" maybeTaskOutput.output) && maybeTaskOutput.output.__type == "taskOutput";
 
   collectTasks = { output, currentPath, opts ? {} }:
     if isTask output then

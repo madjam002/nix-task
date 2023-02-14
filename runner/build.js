@@ -24,6 +24,9 @@ require('esbuild').build({
     'process.env.PKG_PATH_UTIL_LINUX': JSON.stringify(
       process.env.PKG_PATH_UTIL_LINUX,
     ),
+    'process.env.CONF_NIX_LIB_PATH': JSON.stringify(
+      process.env.CONF_NIX_LIB_PATH,
+    ),
   },
   logLevel: 'warning',
 })

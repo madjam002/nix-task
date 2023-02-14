@@ -710,6 +710,7 @@ __metadata:
     lodash: "npm:^4.17.21"
     redux-saga: "npm:^1.2.1"
     tmp-promise: "npm:^3.0.3"
+    typescript: "npm:4.9.1-beta"
   bin:
     nix-task: nix-task.js
   languageName: unknown
@@ -913,6 +914,26 @@ __metadata:
   dependencies:
     typescript-compare: "npm:^0.0.2"
   checksum: 53f3b380618ef56eb7c58f5cf027baf547416d8ef8145ac0b053e4f61bbef581c0f018393868e4cfa02c281d2250a9b8fd21d12615db992033e100702f4dea61
+  languageName: node
+  linkType: hard
+
+"typescript@npm:4.9.1-beta":
+  version: 4.9.1-beta
+  resolution: "typescript@npm:4.9.1-beta"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: e024fb9fb4abd95c2b2fa877ec9b3aab833a388690709d2e12aef0a9adc12be95fb2f9410b479a5b3c277c240b026e92e82227a5e4ece1868b57ce5be6f45cef
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>":
+  version: 4.9.1-beta
+  resolution: "typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 54c08d930b680d1c892d5ad9e9fb4ba9d8b2c5e94d6cbbafd22112ba7248c113b0f05a48b07a1b5f6a2f6be904d9ec8ce691fe6cb2fdd864401b6437f0ff36c9
   languageName: node
   linkType: hard
 

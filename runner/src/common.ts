@@ -9,7 +9,11 @@ import { NixFlakeMetadata, NixTaskObject, Task } from './interfaces'
 import { notEmpty } from './ts'
 import chalk from 'chalk'
 
-let getTasksNix = require('../getTasks.nix')
+let getTasksNix = require(process.env.CONF_NIX_LIB_PATH + '/getTasks.nix')
+getTasksNix = getTasksNix.substring(
+  0,
+  getTasksNix.lastIndexOf('# __beginExports__'),
+)
 
 export async function nixCurrentSystem() {
   return JSON.parse(
@@ -100,18 +104,25 @@ function collectTasks(
     for (const task of draft) {
       const allDiscoveredDeps: any = []
 
-      Object.keys(task.deps).forEach(depKey => {
-        const value = task.deps[depKey]
-        const foundTaskForDependency =
-          typeof value === 'string'
-            ? draft.find((_task: any) => _task.id === value)
-            : null
+      function addDeps(objWithDeps: any) {
+        Object.keys(objWithDeps.deps).forEach(depKey => {
+          const value = objWithDeps.deps[depKey]
+          const foundTaskForDependency =
+            typeof value === 'string'
+              ? draft.find((_task: any) => _task.id === value)
+              : null
 
-        if (foundTaskForDependency) {
-          task.deps[depKey] = foundTaskForDependency
-          allDiscoveredDeps.push(task.deps[depKey])
-        }
-      })
+          if (value?.__type === 'taskOutput' && value?.deps != null) {
+            value.ref = [flakePathToUse, value.flakeAttributePath].join('#')
+            addDeps(value)
+          } else if (foundTaskForDependency) {
+            objWithDeps.deps[depKey] = foundTaskForDependency
+            allDiscoveredDeps.push(foundTaskForDependency)
+          }
+        })
+      }
+
+      addDeps(task)
 
       task.allDiscoveredDeps = allDiscoveredDeps
       task.ref = [flakePathToUse, task.flakeAttributePath].join('#')

@@ -12,6 +12,8 @@ See [examples/nixMathHomework/flake.nix](examples/nixMathHomework/flake.nix) as 
 
 ## Documentation
 
+Tasks will be collected recursively from the provided attr path, unless any attrset that is encountered has `_nixTaskDontRecurseTasks` set to true.
+
 ### Nix library
 
 #### `nix-task.lib.mkTask`

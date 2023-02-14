@@ -24,5 +24,6 @@ mkShell {
     export PKG_PATH_JQ="${pkgs.jq}"
     export PKG_PATH_NODEJS="${pkgs.nodejs}"
     export PKG_PATH_UTIL_LINUX="${pkgs.util-linux}"
+    export CONF_NIX_LIB_PATH="$REPO_ROOT/nix/lib"
   '';
 }

@@ -1,9 +1,10 @@
 import path from 'path'
 import fs from 'fs-extra'
 import { Task } from './interfaces'
+import { callTaskGetOutput } from './common'
 
 export default async function buildLazyContextForTask(
-  task: Task,
+  task: Pick<Task, 'deps'>,
   { nixTaskStateDir }: { nixTaskStateDir: string },
 ) {
   const depKeys = Object.keys(task.deps)
@@ -68,6 +69,18 @@ export default async function buildLazyContextForTask(
         if (!depsContext[depKey]) depsContext[depKey] = {}
         depsContext[depKey].artifacts = artifactPaths
       }
+    } else if (_dep?.__type === 'taskOutput') {
+      const taskOutputDep = _dep
+      const taskOutputDepsContext = await buildLazyContextForTask(
+        { deps: taskOutputDep.deps },
+        { nixTaskStateDir },
+      )
+      const taskOutputResult = await callTaskGetOutput(
+        taskOutputDep.ref,
+        taskOutputDepsContext,
+      )
+      if (!depsContext[depKey]) depsContext[depKey] = {}
+      depsContext[depKey].output = taskOutputResult
     } else {
       // dep is just a plain object, return as is
       depsContext[depKey] = _dep

@@ -1114,6 +1114,7 @@ let
         "lodash" = packages."lodash@npm:4.17.21";
         "redux-saga" = packages."redux-saga@npm:1.2.1";
         "tmp-promise" = packages."tmp-promise@npm:3.0.3";
+        "typescript" = packages."typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21";
       };
     };
     "npm-run-path@npm:5.1.0" = {
@@ -1450,6 +1451,38 @@ let
       checksum = "9/53f3b380618ef56eb7c58f5cf027baf547416d8ef8145ac0b053e4f61bbef581c0f018393868e4cfa02c281d2250a9b8fd21d12615db992033e100702f4dea61";
       dependencies = {
         "typescript-compare" = packages."typescript-compare@npm:0.0.2";
+      };
+    };
+    "typescript@npm:4.9.1-beta" = {
+      name = "typescript";
+      reference = "npm:4.9.1-beta";
+      linkType = "HARD";
+      outputName = "typescript-4.9.1-beta-7ff573487c";
+      outputHash = "e024fb9fb4abd95c2b2fa877ec9b3aab833a388690709d2e12aef0a9adc12be95fb2f9410b479a5b3c277c240b026e92e82227a5e4ece1868b57ce5be6f45cef";
+      flatName = "typescript";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:4.9.1-beta";
+      checksum = "9/e024fb9fb4abd95c2b2fa877ec9b3aab833a388690709d2e12aef0a9adc12be95fb2f9410b479a5b3c277c240b026e92e82227a5e4ece1868b57ce5be6f45cef";
+      bin = {
+        "tsc" = "bin/tsc";
+        "tsserver" = "bin/tsserver";
+      };
+    };
+    "typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21" = {
+      name = "typescript";
+      reference = "patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21";
+      linkType = "HARD";
+      outputName = "typescript-4.9.1-beta-36a8612e2f";
+      outputHash = "54c08d930b680d1c892d5ad9e9fb4ba9d8b2c5e94d6cbbafd22112ba7248c113b0f05a48b07a1b5f6a2f6be904d9ec8ce691fe6cb2fdd864401b6437f0ff36c9";
+      flatName = "typescript";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>";
+      checksum = "9/54c08d930b680d1c892d5ad9e9fb4ba9d8b2c5e94d6cbbafd22112ba7248c113b0f05a48b07a1b5f6a2f6be904d9ec8ce691fe6cb2fdd864401b6437f0ff36c9";
+      bin = {
+        "tsc" = "bin/tsc";
+        "tsserver" = "bin/tsserver";
       };
     };
     "universalify@npm:2.0.0" = {
