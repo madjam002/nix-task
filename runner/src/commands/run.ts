@@ -260,6 +260,8 @@ function* runTask(
     runScript = builtLazyTask.run
   }
 
+  let backgroundLogTask
+
   try {
     const proc = execa(
       spawnCmd,
@@ -299,7 +301,7 @@ function* runTask(
         proc.stderr as NodeJS.ReadableStream,
       )
 
-      yield fork(function* () {
+      backgroundLogTask = yield fork(function* () {
         let collectedLines: any[] = []
         function printLines() {
           if (lastTaskIdToBeLogged !== task.id) {
@@ -379,7 +381,7 @@ function* runTask(
   } catch (ex) {
     return false
   } finally {
-    yield cancel()
+    if (backgroundLogTask?.cancel) backgroundLogTask.cancel()
     yield call(() => tmpDir.cleanup())
   }
 }
