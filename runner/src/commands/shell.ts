@@ -52,6 +52,7 @@ export default async function shell(
   } = await setupRunEnvironment(task, {
     forDevShell: true,
     debug: options.debug,
+    isDryRunMode: false,
   })
 
   let shellHookScript = options.shellHook ? task.shellHook : ''

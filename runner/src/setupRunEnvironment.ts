@@ -21,7 +21,7 @@ export async function setupRunEnvironmentGlobal() {
 
 export async function setupRunEnvironment(
   task: Task,
-  opts: { forDevShell: boolean; debug?: boolean },
+  opts: { forDevShell: boolean; debug?: boolean; isDryRunMode?: boolean },
 ) {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
   const flakeLocalRepoPath = getFlakeUrlLocalRepoPath(
@@ -108,7 +108,11 @@ export async function setupRunEnvironment(
     tmpDir,
     env,
     lazyContext,
-    bashStdlib: getBashStdlib({ lazyContext, dummyHomeDir }),
+    bashStdlib: getBashStdlib({
+      lazyContext,
+      dummyHomeDir,
+      isDryRunMode: opts.isDryRunMode ?? false,
+    }),
     spawnCmd,
     spawnArgs,
   }
@@ -117,9 +121,11 @@ export async function setupRunEnvironment(
 function getBashStdlib({
   lazyContext,
   dummyHomeDir,
+  isDryRunMode,
 }: {
   lazyContext?: any
   dummyHomeDir: string
+  isDryRunMode: boolean
 }) {
   let experimentalTaskUserNamespacesSetup = ''
 
@@ -134,6 +140,12 @@ ${process.env.PKG_PATH_UTIL_LINUX}/bin/mount --bind ${dummyHomeDir} /root
 set -e
 
 ${experimentalTaskUserNamespacesSetup}
+
+function taskRunShouldApply {
+  ${isDryRunMode ? 'false' : 'true'}
+}
+
+export -f taskRunShouldApply
 
 function taskSetOutput {
   ${process.env.PKG_PATH_JQ}/bin/jq --null-input -cM \

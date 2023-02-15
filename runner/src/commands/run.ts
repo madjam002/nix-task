@@ -32,6 +32,8 @@ export default async function run(
     console.log('got tasks', tasks)
   }
 
+  const isDryRunMode = options.dryRun ?? false
+
   const onlyTask =
     options.only === true
       ? tasks.find(task => task.exactRefMatch === true)
@@ -72,12 +74,17 @@ export default async function run(
 
   await setupRunEnvironmentGlobal()
 
+  if (isDryRunMode) {
+    console.log(chalk.bold.yellow('Instructing tasks to run in dry-run mode'))
+  }
+
   top: for (const group of sortedTasks) {
     for (const idToRun of group) {
       const task = tasks.find(task => task.id === idToRun)!
       const success = await runSaga({}, runTask, task, {
         interactive: options.interactive,
         debug: options.debug,
+        isDryRunMode,
       }).toPromise()
       if (!success) {
         console.log()
@@ -128,11 +135,15 @@ function calculateBatchedRunOrder(tasks: Task[]) {
 
 function* runTask(
   task: Task,
-  opts: { interactive: boolean; debug?: boolean },
+  opts: { interactive: boolean; debug?: boolean; isDryRunMode: boolean },
 ): any {
   console.log()
 
-  const headerPrefix = ' Running ' + task.prettyRef + ' '
+  let headerPrefix = ' Running ' + task.prettyRef + ' '
+
+  if (opts.isDryRunMode) {
+    headerPrefix += chalk.bold.yellow('(dry-run)') + ' '
+  }
 
   console.log(
     chalk.yellow('──') +
@@ -158,7 +169,11 @@ function* runTask(
     spawnCmd,
     spawnArgs,
   } = yield call(() =>
-    setupRunEnvironment(task, { forDevShell: false, debug: opts.debug }),
+    setupRunEnvironment(task, {
+      forDevShell: false,
+      debug: opts.debug,
+      isDryRunMode: opts.isDryRunMode,
+    }),
   )
 
   let runScript = task.run

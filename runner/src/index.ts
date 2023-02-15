@@ -35,6 +35,11 @@ program
     'runs tasks with the stdin TTY passed through, enabling interactivity. implies no parallelism',
     false,
   )
+  .option(
+    '-n, --dry-run',
+    'instruct tasks to run in "dry-run" mode, which shouldn\'t make any changes and should just perform a trial run',
+    false,
+  )
   .option('-g, --graph', 'show a dependency graph of the running order', false)
   .option(
     '--debug',
