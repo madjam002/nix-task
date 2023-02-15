@@ -1,10 +1,12 @@
 import { Command } from 'commander'
-import { runSaga } from 'redux-saga'
-import { call } from 'redux-saga/effects'
+import { eventChannel, runSaga } from 'redux-saga'
+import { call, cancel, delay, fork, race, take } from 'redux-saga/effects'
 import chalk from 'chalk'
+import stripAnsi from 'strip-ansi'
 import fs from 'fs-extra'
-import path from 'path'
+import readline from 'node:readline/promises'
 import { execa } from 'execa'
+import PQueue from 'p-queue'
 import _ from 'lodash'
 import { Task } from '../interfaces'
 import {
@@ -49,6 +51,15 @@ export default async function run(
     )
   }
 
+  const concurrency = options.concurrency
+  const isRunningConcurrently = concurrency != null && concurrency > 1
+
+  if (isRunningConcurrently && options.interactive) {
+    throw new Error(
+      'nix-task run(): Cannot use --concurrency and --interactive at the same time',
+    )
+  }
+
   const sortedTasks = onlyTask
     ? [[onlyTask.id]]
     : calculateBatchedRunOrder(tasks)
@@ -75,25 +86,66 @@ export default async function run(
   await setupRunEnvironmentGlobal()
 
   if (isDryRunMode) {
-    console.log(chalk.bold.yellow('Instructing tasks to run in dry-run mode'))
+    console.log(chalk.bold.yellow('Instructing tasks to run in dry run mode'))
   }
+
+  const queue = new PQueue({
+    concurrency: isRunningConcurrently ? concurrency : 1,
+  })
+
+  const taskIdsToRun = _.flatten(sortedTasks)
+
+  const taskDoneStatus: { [taskId: string]: boolean } = {}
 
   top: for (const group of sortedTasks) {
     for (const idToRun of group) {
-      const task = tasks.find(task => task.id === idToRun)!
-      const success = await runSaga({}, runTask, task, {
-        interactive: options.interactive,
-        debug: options.debug,
-        isDryRunMode,
-      }).toPromise()
-      if (!success) {
-        console.log()
-        console.log(chalk.red('──') + ' ' + chalk.bold.red('Failed'))
-        console.log()
-        process.exit(1)
-      }
+      queue.add(async function () {
+        const task = tasks.find(task => task.id === idToRun)!
+
+        // wait for task dependencies to finish (only has any effect when running tasks concurrently)
+        if (
+          !areAllDependenciesSatisifiedForTask(
+            task,
+            taskIdsToRun,
+            taskDoneStatus,
+          )
+        ) {
+          await new Promise(resolve => {
+            const handler = () => {
+              if (
+                areAllDependenciesSatisifiedForTask(
+                  task,
+                  taskIdsToRun,
+                  taskDoneStatus,
+                )
+              ) {
+                queue.removeListener('completed', handler)
+                resolve(true)
+              }
+            }
+            queue.on('completed', handler)
+          })
+        }
+
+        const success = await runSaga({}, runTask, task, {
+          interactive: options.interactive,
+          debug: options.debug,
+          isDryRunMode,
+          isRunningConcurrently,
+        }).toPromise()
+        if (!success) {
+          console.log()
+          console.log(chalk.red('──') + ' ' + chalk.bold.red('Failed'))
+          console.log()
+          process.exit(1)
+        } else {
+          taskDoneStatus[task.id] = true
+        }
+      })
     }
   }
+
+  await queue.onIdle()
 
   const endTime = Date.now()
 
@@ -133,26 +185,48 @@ function calculateBatchedRunOrder(tasks: Task[]) {
   return runOrder
 }
 
+function areAllDependenciesSatisifiedForTask(
+  task: Task,
+  taskIdsToRun: string[],
+  doneStatus: { [taskId: string]: boolean },
+) {
+  return task.allDiscoveredDeps.every(dep =>
+    taskIdsToRun.includes(dep.id) ? doneStatus[dep.id] === true : true,
+  )
+}
+
+let lastTaskIdToBeLogged: string | null = null
+
 function* runTask(
   task: Task,
-  opts: { interactive: boolean; debug?: boolean; isDryRunMode: boolean },
+  opts: {
+    interactive: boolean
+    debug?: boolean
+    isDryRunMode: boolean
+    isRunningConcurrently?: boolean
+  },
 ): any {
   console.log()
 
   let headerPrefix = ' Running ' + task.prettyRef + ' '
 
   if (opts.isDryRunMode) {
-    headerPrefix += chalk.bold.yellow('(dry-run)') + ' '
+    headerPrefix += chalk.bold.yellow('(dry run)') + ' '
   }
 
   console.log(
     chalk.yellow('──') +
       headerPrefix +
       chalk.yellow(
-        ''.padEnd(process.stdout.columns - 2 - headerPrefix.length, '─'),
+        ''.padEnd(
+          process.stdout.columns - 2 - stripAnsi(headerPrefix).length,
+          '─',
+        ),
       ),
   )
   console.log()
+
+  lastTaskIdToBeLogged = task.id
 
   if (opts.debug) {
     console.log('running task', task)
@@ -197,13 +271,15 @@ function* runTask(
         bashStdlib + '\n' + runScript,
       ],
       {
-        stdio: [
-          opts.interactive ? 'inherit' : 'ignore',
-          'inherit',
-          'inherit',
-          undefined,
-          'pipe',
-        ],
+        stdio: opts.isRunningConcurrently
+          ? ['ignore', 'pipe', 'pipe', undefined, 'pipe']
+          : [
+              opts.interactive ? 'inherit' : 'ignore',
+              'inherit',
+              'inherit',
+              undefined,
+              'pipe',
+            ],
         cwd: workingDir,
         env: {
           ...env,
@@ -212,6 +288,68 @@ function* runTask(
         extendEnv: false,
       },
     )
+
+    if (opts.isRunningConcurrently) {
+      // when running concurrently, buffer stdout/stderr so that it's a bit easier to read when multiple
+      // tasks are running in parallel
+      const stdout = createProcessOutputChannel(
+        proc.stdout as NodeJS.ReadableStream,
+      )
+      const stderr = createProcessOutputChannel(
+        proc.stderr as NodeJS.ReadableStream,
+      )
+
+      yield fork(function* () {
+        let collectedLines: any[] = []
+        function printLines() {
+          if (lastTaskIdToBeLogged !== task.id) {
+            // only log task header if the last log lines came from a different task
+            console.log()
+            const headerPrefix = ' ' + task.prettyRef + ' '
+            console.log(
+              chalk.gray('──') +
+                headerPrefix +
+                chalk.gray(
+                  ''.padEnd(
+                    process.stdout.columns - 2 - stripAnsi(headerPrefix).length,
+                    '─',
+                  ),
+                ),
+            )
+            console.log()
+            lastTaskIdToBeLogged = task.id
+          }
+          for (const line of collectedLines) {
+            if (line.type === 'out') console.log(line.line)
+            else if (line.type === 'err') console.error(line.line)
+          }
+          collectedLines = []
+        }
+
+        try {
+          while (true) {
+            const [out, err, didDelay] = yield race([
+              take(stdout),
+              take(stderr),
+              delay(500),
+            ])
+            if (out != null) collectedLines.push({ type: 'out', line: out })
+            if (err != null) collectedLines.push({ type: 'err', line: err })
+
+            const shouldPrint =
+              collectedLines.length === 0 || // print straight away if it's the first lines in a batch
+              didDelay // or the delay time has passed
+
+            if (shouldPrint && collectedLines.length > 0) {
+              printLines()
+            }
+          }
+        } finally {
+          // print any remaining lines
+          printLines()
+        }
+      })
+    }
 
     const outputRef = { current: null }
 
@@ -241,6 +379,20 @@ function* runTask(
   } catch (ex) {
     return false
   } finally {
+    yield cancel()
     yield call(() => tmpDir.cleanup())
   }
+}
+
+function createProcessOutputChannel(stream: NodeJS.ReadableStream) {
+  const lineInterface = readline.createInterface(stream)
+  return eventChannel(emitter => {
+    lineInterface.on('line', data => {
+      emitter(data)
+    })
+
+    return () => {
+      lineInterface.close()
+    }
+  })
 }

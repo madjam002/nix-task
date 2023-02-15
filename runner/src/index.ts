@@ -37,8 +37,13 @@ program
   )
   .option(
     '-n, --dry-run',
-    'instruct tasks to run in "dry-run" mode, which shouldn\'t make any changes and should just perform a trial run',
+    'instruct tasks to run in "dry run" mode, which shouldn\'t make any changes and should just perform a trial run',
     false,
+  )
+  .option(
+    '-J, --concurrency <concurrency>',
+    'maximum number of tasks to run at once in parallel. Cannot be used with --interactive',
+    parseInt,
   )
   .option('-g, --graph', 'show a dependency graph of the running order', false)
   .option(

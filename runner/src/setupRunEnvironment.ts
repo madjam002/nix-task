@@ -28,8 +28,8 @@ export async function setupRunEnvironment(
     task.resolvedOriginalFlakeUrl,
   )?.repoRoot
   const nixTaskStateDir = path.join(flakeRootDir, '.nix-task')
-  const dummyHomeDir = path.join(nixTaskStateDir, 'home')
   const taskDirName = `${task.name}-${task.id.substring(0, 12)}` // show name first so that if the name is truncated it's easy to understand what it is
+  const dummyHomeDir = path.join(nixTaskStateDir, 'home', taskDirName) // separate home directory for each task so we don't have collisions when running concurrently
   const tempWorkingDir = path.join(nixTaskStateDir, 'work', taskDirName)
   const artifactsDir = path.join(nixTaskStateDir, 'artifacts', taskDirName)
   const outJSONFile = path.join(

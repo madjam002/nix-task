@@ -16,7 +16,9 @@
     "fs-extra": "^10.1.0",
     "immer": "^9.0.15",
     "lodash": "^4.17.21",
+    "p-queue": "^7.3.4",
     "redux-saga": "^1.2.1",
+    "strip-ansi": "^7.0.1",
     "tmp-promise": "^3.0.3",
     "typescript": "4.9.1-beta"
   }

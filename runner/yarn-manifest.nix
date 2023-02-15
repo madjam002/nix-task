@@ -228,6 +228,18 @@ let
       descriptorRange = "npm:^4.0.0";
       checksum = "9/bea37b307bdeb352d27a4467cac738387641c4f9dfe6c8bf559d474a036952f7b998f0ac54290f9d8765fb79e154f3941dfefbb47296a987fb55ccedf344a0e6";
     };
+    "ansi-regex@npm:6.0.1" = {
+      name = "ansi-regex";
+      reference = "npm:6.0.1";
+      linkType = "HARD";
+      outputName = "ansi-regex-6.0.1-8d663a607d";
+      outputHash = "53669c3634190ead828055bcae5f0feff485fd8d7d05538d4f753ad56ffedb7aa5bcc93efaa8e99e4907ad970682413f2407cf4acac8deb1d408bc564bca9027";
+      flatName = "ansi-regex";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^6.0.1";
+      checksum = "9/53669c3634190ead828055bcae5f0feff485fd8d7d05538d4f753ad56ffedb7aa5bcc93efaa8e99e4907ad970682413f2407cf4acac8deb1d408bc564bca9027";
+    };
     "ansi-styles@npm:3.2.1" = {
       name = "ansi-styles";
       reference = "npm:3.2.1";
@@ -769,6 +781,18 @@ let
       descriptorRange = "npm:^1.0.5";
       checksum = "9/14d2c74a990b4a0ae55f299409693533a620402a6efa02b201d7e2ea60c71a516c36ccfcaf2aa604262eec6c4628bf8b9647e211fb179277cb479bd870c906fa";
     };
+    "eventemitter3@npm:4.0.7" = {
+      name = "eventemitter3";
+      reference = "npm:4.0.7";
+      linkType = "HARD";
+      outputName = "eventemitter3-4.0.7-7afcdd74ae";
+      outputHash = "e6ecb1ac2fee59b0ba0e778564cec0a1fe0631f28a50f24aa0e7ba367e718c5f9b23156fb2c1d238bcebe7923dfff37a63c39b519121a47c7bf78c38c96febd8";
+      flatName = "eventemitter3";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^4.0.7";
+      checksum = "9/e6ecb1ac2fee59b0ba0e778564cec0a1fe0631f28a50f24aa0e7ba367e718c5f9b23156fb2c1d238bcebe7923dfff37a63c39b519121a47c7bf78c38c96febd8";
+    };
     "execa@npm:6.1.0" = {
       name = "execa";
       reference = "npm:6.1.0";
@@ -1112,7 +1136,9 @@ let
         "fs-extra" = packages."fs-extra@npm:10.1.0";
         "immer" = packages."immer@npm:9.0.16";
         "lodash" = packages."lodash@npm:4.17.21";
+        "p-queue" = packages."p-queue@npm:7.3.4";
         "redux-saga" = packages."redux-saga@npm:1.2.1";
+        "strip-ansi" = packages."strip-ansi@npm:7.0.1";
         "tmp-promise" = packages."tmp-promise@npm:3.0.3";
         "typescript" = packages."typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21";
       };
@@ -1161,6 +1187,34 @@ let
       dependencies = {
         "mimic-fn" = packages."mimic-fn@npm:4.0.0";
       };
+    };
+    "p-queue@npm:7.3.4" = {
+      name = "p-queue";
+      reference = "npm:7.3.4";
+      linkType = "HARD";
+      outputName = "p-queue-7.3.4-c746a7f1ae";
+      outputHash = "f2a163b1ac35ea31c19b1b7dee2223126605dd945b29c265427a5d1840fe35b231e8e7db4e93e7c8d9e074b4e3abd9eceaea1f5c820634dfe3a972da2fa6e914";
+      flatName = "p-queue";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^7.3.4";
+      checksum = "9/f2a163b1ac35ea31c19b1b7dee2223126605dd945b29c265427a5d1840fe35b231e8e7db4e93e7c8d9e074b4e3abd9eceaea1f5c820634dfe3a972da2fa6e914";
+      dependencies = {
+        "eventemitter3" = packages."eventemitter3@npm:4.0.7";
+        "p-timeout" = packages."p-timeout@npm:5.1.0";
+      };
+    };
+    "p-timeout@npm:5.1.0" = {
+      name = "p-timeout";
+      reference = "npm:5.1.0";
+      linkType = "HARD";
+      outputName = "p-timeout-5.1.0-11ca554b60";
+      outputHash = "76a7859acee180296d0f4a4650fa70b03973ec13ce73fa3a44540c19634a221592d1c05efff339e1bf76cc0b66bcc96fe51988ac11d451aa5cb13fbf752a2d2a";
+      flatName = "p-timeout";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^5.0.2";
+      checksum = "9/76a7859acee180296d0f4a4650fa70b03973ec13ce73fa3a44540c19634a221592d1c05efff339e1bf76cc0b66bcc96fe51988ac11d451aa5cb13fbf752a2d2a";
     };
     "parent-module@npm:1.0.1" = {
       name = "parent-module";
@@ -1353,6 +1407,21 @@ let
       scope = null;
       descriptorRange = "npm:^3.0.7";
       checksum = "9/5cf7525c55a72d8d104d914acf2e470f74b2c156197277ad7b331bc5de3d8790170fed3c82ff98c7c31adaa8ff941bfd5ba44f55171cbe8ed0e939fa82a8322a";
+    };
+    "strip-ansi@npm:7.0.1" = {
+      name = "strip-ansi";
+      reference = "npm:7.0.1";
+      linkType = "HARD";
+      outputName = "strip-ansi-7.0.1-668c121204";
+      outputHash = "552123468abae97929da64559af9c13f4518f8ea199038089bf5e49d7860d708e5e29b2e6401fcbab6f99f2c42f865c15a1976bcf51c5165f82152c7ce9a1043";
+      flatName = "strip-ansi";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^7.0.1";
+      checksum = "9/552123468abae97929da64559af9c13f4518f8ea199038089bf5e49d7860d708e5e29b2e6401fcbab6f99f2c42f865c15a1976bcf51c5165f82152c7ce9a1043";
+      dependencies = {
+        "ansi-regex" = packages."ansi-regex@npm:6.0.1";
+      };
     };
     "strip-final-newline@npm:3.0.0" = {
       name = "strip-final-newline";

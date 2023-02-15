@@ -141,6 +141,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ansi-regex@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "ansi-regex@npm:6.0.1"
+  checksum: 53669c3634190ead828055bcae5f0feff485fd8d7d05538d4f753ad56ffedb7aa5bcc93efaa8e99e4907ad970682413f2407cf4acac8deb1d408bc564bca9027
+  languageName: node
+  linkType: hard
+
 "ansi-styles@npm:^3.2.1":
   version: 3.2.1
   resolution: "ansi-styles@npm:3.2.1"
@@ -495,6 +502,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eventemitter3@npm:^4.0.7":
+  version: 4.0.7
+  resolution: "eventemitter3@npm:4.0.7"
+  checksum: e6ecb1ac2fee59b0ba0e778564cec0a1fe0631f28a50f24aa0e7ba367e718c5f9b23156fb2c1d238bcebe7923dfff37a63c39b519121a47c7bf78c38c96febd8
+  languageName: node
+  linkType: hard
+
 "execa@npm:^6.1.0":
   version: 6.1.0
   resolution: "execa@npm:6.1.0"
@@ -708,7 +722,9 @@ __metadata:
     fs-extra: "npm:^10.1.0"
     immer: "npm:^9.0.15"
     lodash: "npm:^4.17.21"
+    p-queue: "npm:^7.3.4"
     redux-saga: "npm:^1.2.1"
+    strip-ansi: "npm:^7.0.1"
     tmp-promise: "npm:^3.0.3"
     typescript: "npm:4.9.1-beta"
   bin:
@@ -740,6 +756,23 @@ __metadata:
   dependencies:
     mimic-fn: "npm:^4.0.0"
   checksum: 652280f3e6536e1393b5bd59b26ae46522cb40459ed39662bc287b57f374ba299e7025b0510f068dfb10cceec2fb86b369ffcc5eef5f9b9c28d21ccd2476364a
+  languageName: node
+  linkType: hard
+
+"p-queue@npm:^7.3.4":
+  version: 7.3.4
+  resolution: "p-queue@npm:7.3.4"
+  dependencies:
+    eventemitter3: "npm:^4.0.7"
+    p-timeout: "npm:^5.0.2"
+  checksum: f2a163b1ac35ea31c19b1b7dee2223126605dd945b29c265427a5d1840fe35b231e8e7db4e93e7c8d9e074b4e3abd9eceaea1f5c820634dfe3a972da2fa6e914
+  languageName: node
+  linkType: hard
+
+"p-timeout@npm:^5.0.2":
+  version: 5.1.0
+  resolution: "p-timeout@npm:5.1.0"
+  checksum: 76a7859acee180296d0f4a4650fa70b03973ec13ce73fa3a44540c19634a221592d1c05efff339e1bf76cc0b66bcc96fe51988ac11d451aa5cb13fbf752a2d2a
   languageName: node
   linkType: hard
 
@@ -855,6 +888,15 @@ __metadata:
   version: 3.0.7
   resolution: "signal-exit@npm:3.0.7"
   checksum: 5cf7525c55a72d8d104d914acf2e470f74b2c156197277ad7b331bc5de3d8790170fed3c82ff98c7c31adaa8ff941bfd5ba44f55171cbe8ed0e939fa82a8322a
+  languageName: node
+  linkType: hard
+
+"strip-ansi@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "strip-ansi@npm:7.0.1"
+  dependencies:
+    ansi-regex: "npm:^6.0.1"
+  checksum: 552123468abae97929da64559af9c13f4518f8ea199038089bf5e49d7860d708e5e29b2e6401fcbab6f99f2c42f865c15a1976bcf51c5165f82152c7ce9a1043
   languageName: node
   linkType: hard
 
