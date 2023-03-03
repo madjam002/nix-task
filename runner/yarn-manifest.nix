@@ -564,7 +564,9 @@ let
       reference = "npm:0.15.12";
       linkType = "HARD";
       outputName = "esbuild-linux-arm64-0.15.12-c3c03c61da";
-      outputHash = "";
+      outputHashByPlatform = {
+        "aarch64-linux" = "sha512-cHIl9IcJpPcakQ1xCwOfgPquqd7U84p2oZUlrx9EvAduZZVj1voA73gjcfe2Rs+y1l6p3S+dnleqxLZosMYJmQ==";
+      };
       shouldBeUnplugged = true;
       installCondition = stdenv: (stdenv.isLinux) && (stdenv.isAarch64);
       flatName = "esbuild-linux-arm64";
@@ -734,6 +736,7 @@ let
       outputHashByPlatform = {
         "aarch64-darwin" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
         "x86_64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
+        "aarch64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
       };
       shouldBeUnplugged = true;
       flatName = "esbuild";
