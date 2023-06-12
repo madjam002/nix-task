@@ -96,6 +96,24 @@
                 '';
               };
             };
+
+            passthroughTest = nix-task.lib.mkTask {
+              stableId = [ "passthrough_test" ];
+              dir = ./.;
+              path = with channels.nixpkgs; [
+                channels.nixpkgs.nodejs-16_x
+              ];
+              impureEnvPassthrough = [ "SSH_AUTH_SOCK" ];
+              run = ''
+                echo "got ssh auth sock $IMPURE_SSH_AUTH_SOCK"
+                env
+              '';
+              shellHook = ''
+                echo "got shell hook!"
+                echo "got ssh auth sock $IMPURE_SSH_AUTH_SOCK"
+                env
+              '';
+            };
           };
 
         };

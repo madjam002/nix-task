@@ -72,6 +72,7 @@ let
         inherit dir;
         inherit path;
         inherit artifacts;
+        inherit impureEnvPassthrough;
         inherit run;
         inherit shellHook;
         hasGetOutput = getOutput != null && isFunction getOutput;

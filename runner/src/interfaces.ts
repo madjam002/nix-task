@@ -27,6 +27,7 @@ export interface Task {
   dir: string
   path: string[]
   artifacts: string[]
+  impureEnvPassthrough: string[]
   storeDependencies: string[]
   run: string
   shellHook?: string

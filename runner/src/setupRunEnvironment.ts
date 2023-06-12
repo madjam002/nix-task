@@ -82,6 +82,15 @@ export async function setupRunEnvironment(
     out: artifactsDir,
   }
 
+  if (
+    task.impureEnvPassthrough != null &&
+    task.impureEnvPassthrough.length > 0
+  ) {
+    task.impureEnvPassthrough.forEach(envName => {
+      env[`IMPURE_${envName}`] = process.env[envName]
+    })
+  }
+
   const lazyContext: any = await buildLazyContextForTask(task, {
     nixTaskStateDir,
   })

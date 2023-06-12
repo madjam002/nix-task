@@ -11,6 +11,7 @@ opts@{
   path ? [],
   deps ? {},
   artifacts ? [], # list of file names that this task exports as artifacts
+  impureEnvPassthrough ? [],
   run ? "",
   shellHook ? "",
   getOutput ? null,
@@ -30,6 +31,7 @@ else
   inherit path;
   inherit deps;
   inherit artifacts;
+  inherit impureEnvPassthrough;
   dir = dirString;
   run = initialRunString;
   shellHook = initialShellHookString;
@@ -42,6 +44,7 @@ else
       inherit path;
       inherit deps;
       inherit artifacts;
+      inherit impureEnvPassthrough;
       dir = dirString;
       run = if (isString run) then run else (run ctx);
       shellHook = if (isString shellHook) then shellHook else (shellHook ctx);
