@@ -735,8 +735,8 @@ let
       outputName = "esbuild-0.15.12-0d999cf382";
       outputHashByPlatform = {
         "aarch64-darwin" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
-        "x86_64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
         "aarch64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
+        "x86_64-linux" = "sha512-1Agkb8PowNIrcOdADf2KmzBeEIrMTDYuWxlCyx7FoEVS1/crZhB8iW5D0xsS9fKhDdOIpHZUSQP2xLf9go7C7w==";
       };
       shouldBeUnplugged = true;
       flatName = "esbuild";
@@ -1125,6 +1125,9 @@ let
       bin = {
         "nix-task" = "nix-task.js";
       };
+      dependencies = {
+        "tree-kill" = packages."tree-kill@npm:1.2.2";
+      };
       devDependencies = {
         "@types/fs-extra" = packages."@types/fs-extra@npm:9.0.13";
         "@types/lodash" = packages."@types/lodash@npm:4.14.187";
@@ -1481,6 +1484,21 @@ let
       checksum = "9/6d7e4d8985fc4b3ee2bc00cd00fb42a9be47d2542d0ebd5fcd9aa69fd9fc337fa949f7a1212cc7d4172559288bef30125787b7b4eca683c2b43c740fcc342a21";
       dependencies = {
         "rimraf" = packages."rimraf@npm:3.0.2";
+      };
+    };
+    "tree-kill@npm:1.2.2" = {
+      name = "tree-kill";
+      reference = "npm:1.2.2";
+      linkType = "HARD";
+      outputName = "tree-kill-1.2.2-3da0e5a759";
+      outputHash = "e1c77812496ec255402297a3494acc4cda93d532ebefb1c6704b38d2a8eb6b9ed03d5f0b088a13341705f2923e52a73c3c2bb87a30ea890095cc51fb7a4ce6e0";
+      flatName = "tree-kill";
+      languageName = "node";
+      scope = null;
+      descriptorRange = "npm:^1.2.2";
+      checksum = "9/e1c77812496ec255402297a3494acc4cda93d532ebefb1c6704b38d2a8eb6b9ed03d5f0b088a13341705f2923e52a73c3c2bb87a30ea890095cc51fb7a4ce6e0";
+      bin = {
+        "tree-kill" = "cli.js";
       };
     };
     "typescript-compare@npm:0.0.2" = {

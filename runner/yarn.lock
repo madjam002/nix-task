@@ -726,6 +726,7 @@ __metadata:
     redux-saga: "npm:^1.2.1"
     strip-ansi: "npm:^7.0.1"
     tmp-promise: "npm:^3.0.3"
+    tree-kill: "npm:^1.2.2"
     typescript: "npm:4.9.1-beta"
   bin:
     nix-task: nix-task.js
@@ -931,6 +932,15 @@ __metadata:
   dependencies:
     rimraf: "npm:^3.0.0"
   checksum: 6d7e4d8985fc4b3ee2bc00cd00fb42a9be47d2542d0ebd5fcd9aa69fd9fc337fa949f7a1212cc7d4172559288bef30125787b7b4eca683c2b43c740fcc342a21
+  languageName: node
+  linkType: hard
+
+"tree-kill@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "tree-kill@npm:1.2.2"
+  bin:
+    tree-kill: cli.js
+  checksum: e1c77812496ec255402297a3494acc4cda93d532ebefb1c6704b38d2a8eb6b9ed03d5f0b088a13341705f2923e52a73c3c2bb87a30ea890095cc51fb7a4ce6e0
   languageName: node
   linkType: hard
 

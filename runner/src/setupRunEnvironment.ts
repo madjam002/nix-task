@@ -11,6 +11,7 @@ import buildLazyContextForTask from './buildLazyContextForTask'
 import { Task } from './interfaces'
 import { getFlakeUrlLocalRepoPath } from './common'
 import config from './config'
+import treeKill from 'tree-kill'
 
 export async function setupRunEnvironmentGlobal() {
   const flakeRootDir = process.cwd() // todo look for flake.nix or something?
@@ -71,6 +72,7 @@ export async function setupRunEnvironment(
 
   const env: any = {
     IMPURE_HOME: process.env.HOME,
+    IMPURE_LOCAL_REPO_ROOT: flakeLocalRepoPath,
     __taskPath: [process.env.PKG_PATH_COREUTILS, ...task.path]
       .map(pkg => pkg + '/bin')
       .join(':'),
@@ -293,7 +295,7 @@ function* runInBackground(
 
   yield race([take(CANCEL), take(exitChannel, 'exit')])
 
-  proc.kill('SIGTERM')
+  if (proc.pid != null) treeKill(proc.pid, 'SIGTERM')
 }
 
 function* runSync(
