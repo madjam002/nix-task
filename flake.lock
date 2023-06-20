@@ -48,11 +48,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1668000170,
-        "narHash": "sha256-ufRhgAkwrOC5RxeM3JiCHTu6hRbhsqGf4PEOARrvcnc=",
+        "lastModified": 1687332243,
+        "narHash": "sha256-FeW4jsD9QXPKAUvq4IaKHqF2wakxMjsu3lTyfhmwdis=",
         "owner": "madjam002",
         "repo": "yarnpnp2nix",
-        "rev": "812b516764811e72a22c7e781597e7896bef2aae",
+        "rev": "14d9228d4beed3904e673c917d57b5267e243fe2",
         "type": "github"
       },
       "original": {

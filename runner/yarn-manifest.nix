@@ -1125,9 +1125,6 @@ let
       bin = {
         "nix-task" = "nix-task.js";
       };
-      dependencies = {
-        "tree-kill" = packages."tree-kill@npm:1.2.2";
-      };
       devDependencies = {
         "@types/fs-extra" = packages."@types/fs-extra@npm:9.0.13";
         "@types/lodash" = packages."@types/lodash@npm:4.14.187";
@@ -1146,6 +1143,7 @@ let
         "redux-saga" = packages."redux-saga@npm:1.2.1";
         "strip-ansi" = packages."strip-ansi@npm:7.0.1";
         "tmp-promise" = packages."tmp-promise@npm:3.0.3";
+        "tree-kill" = packages."tree-kill@npm:1.2.2";
         "typescript" = packages."typescript@patch:typescript@npm%3A4.9.1-beta#optional!builtin<compat/typescript>::version=4.9.1-beta&hash=7f4d21";
       };
     };

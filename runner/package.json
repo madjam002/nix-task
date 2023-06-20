@@ -20,9 +20,7 @@
     "redux-saga": "^1.2.1",
     "strip-ansi": "^7.0.1",
     "tmp-promise": "^3.0.3",
+    "tree-kill": "^1.2.2",
     "typescript": "4.9.1-beta"
-  },
-  "dependencies": {
-    "tree-kill": "^1.2.2"
   }
 }
