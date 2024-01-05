@@ -2,7 +2,7 @@
   description = "Nix Task Runner";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-22.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
     utils.url = "github:numtide/flake-utils";
     yarnpnp2nix.url = "github:madjam002/yarnpnp2nix";
     yarnpnp2nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -19,8 +19,8 @@
           inherit system;
           overlays = [
             (final: prev: {
-              nodejs = prev.nodejs-18_x;
-              yarn = (prev.yarn.override { nodejs = prev.nodejs-18_x; });
+              nodejs = prev.nodejs_20;
+              yarn = (prev.yarn.override { nodejs = prev.nodejs_20; });
             })
           ];
         };
