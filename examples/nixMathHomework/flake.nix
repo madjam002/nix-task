@@ -2,8 +2,8 @@
   description = "A very basic flake";
 
   inputs = {
-    nixpkgs.url = github:nixos/nixpkgs/nixos-22.05;
-    utils.url = github:gytis-ivaskevicius/flake-utils-plus;
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.11";
+    utils.url = "github:gytis-ivaskevicius/flake-utils-plus";
     nix-task.url = "../../.";
     nix-task.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -22,7 +22,7 @@
                 stableId = [ "add_3_and_7" ];
                 dir = ./.;
                 path = with channels.nixpkgs; [
-                  channels.nixpkgs.nodejs-16_x
+                  channels.nixpkgs.nodejs_20
                 ];
                 artifacts = [ "homework" ];
                 run = ''
@@ -34,7 +34,7 @@
                   expr 3 + 7 > $out/homework
                   echo "got results"
                   cat $out/homework
-                  ${channels.nixpkgs.nodejs-16_x}/bin/node --version
+                  ${channels.nixpkgs.nodejs_20}/bin/node --version
 
                   echo "got directory"
                 '';
@@ -101,7 +101,7 @@
               stableId = [ "passthrough_test" ];
               dir = ./.;
               path = with channels.nixpkgs; [
-                channels.nixpkgs.nodejs-16_x
+                channels.nixpkgs.nodejs_20
               ];
               impureEnvPassthrough = [ "SSH_AUTH_SOCK" ];
               run = ''

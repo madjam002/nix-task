@@ -11,7 +11,7 @@ in
 mkShell {
   buildInputs = [
     nodejs
-    yarn
+    yarn-berry
     nixTaskDev
   ];
 
