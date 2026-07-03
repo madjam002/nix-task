@@ -19,12 +19,27 @@ getTasksNix = getTasksNix.substring(
   getTasksNix.lastIndexOf('# __beginExports__'),
 )
 
+// These timings run concurrently under -J and would otherwise share the same
+// console.time label, producing noisy "Label already exists" / "No such label"
+// warnings. Give each span a unique, incrementing label so they never collide.
+let nixTimerCounter = 0
+function startNixTimer(label: string): () => void {
+  const uniqueLabel = `${label} #${++nixTimerCounter}`
+  console.time(uniqueLabel)
+  let ended = false
+  return () => {
+    if (ended) return
+    ended = true
+    console.timeEnd(uniqueLabel)
+  }
+}
+
 export async function nixCurrentSystem() {
+  const endTimer = startNixTimer('nix currentSystem')
   try {
-    console.time('nix currentSystem')
     return await nixEval('builtins.currentSystem')
   } finally {
-    console.timeEnd('nix currentSystem')
+    endTimer()
   }
 }
 
@@ -43,8 +58,8 @@ export async function nixGetTasksFromFlake(
     return taskAttr.substring('tasks.'.length)
   })
 
+  const endTimer = startNixTimer('nix getTasksFromFlake')
   try {
-    console.time('nix getTasksFromFlake')
 
     await nixEval(
       `:l ${path.join(process.env.CONF_NIX_LIB_PATH!, './getTasks.nix')}`,
@@ -75,7 +90,7 @@ export async function nixGetTasksFromFlake(
 
     return tasks as any[]
   } finally {
-    console.timeEnd('nix getTasksFromFlake')
+    endTimer()
   }
 }
 
@@ -185,7 +200,7 @@ export async function nixGetTasks(
 }
 
 export async function preBuild(tasks: Task[]) {
-  console.time('nix store realise')
+  const endTimer = startNixTimer('nix store realise')
   try {
     const proc = execa(
       'nix-store',
@@ -230,11 +245,12 @@ export async function preBuild(tasks: Task[]) {
 
     await proc
   } finally {
-    console.timeEnd('nix store realise')
+    endTimer()
   }
 }
 
 export async function getLazyTask(task: Task, ctx: any) {
+  const endTimer = startNixTimer('nix getLazyTask')
   try {
     if (!task.flakeAttributePath.startsWith('tasks.')) {
       throw new Error(
@@ -243,20 +259,49 @@ export async function getLazyTask(task: Task, ctx: any) {
     }
     const chompedTaskPath = task.flakeAttributePath.substring('tasks.'.length)
 
-    console.time('nix getLazyTask')
-
-    const tasksOutput = await nixEval(
-      `
+    let tasksOutput
+    try {
+      tasksOutput = await nixEval(
+        `
       __toJSON (formatTasks(
         collectTasks {
           output = tasks.${chompedTaskPath}.getLazy (builtins.fromJSON ${JSON.stringify(
-        JSON.stringify(ctx),
-      )});
+          JSON.stringify(ctx),
+        )});
           currentPath = ${JSON.stringify('tasks.' + chompedTaskPath)};
         }
       ))
     `,
-    )
+      )
+    } catch (ex) {
+      // The repl framing is verified independently (see nixRepl.ts), so a nix
+      // evaluation error here is a real evaluation problem, not a serialisation
+      // one. The most common one — "expected a set but found null" — happens
+      // when this task's getLazy/run dereferences a dependency output that is
+      // null. Name the null dependencies so the failure is actionable.
+      logNullContextDeps(task.flakeAttributePath, ctx)
+      throw ex
+    }
+
+    if (!Array.isArray(tasksOutput)) {
+      // getLazyTask must receive an array of tasks from the repl. A non-array
+      // here is what surfaces downstream as the opaque "TypeError: i is not
+      // iterable" inside collectTasks/immer. Fail loudly with the actual value
+      // and command so a repl framing/serialisation problem is diagnosable.
+      console.error(
+        `[nix-task] getLazyTask("${task.flakeAttributePath}") expected an array ` +
+          `from the nix repl but received ${describeReplValue(tasksOutput)}. ` +
+          `This indicates a nix-repl framing/serialisation issue.`,
+      )
+      console.error(
+        '[nix-task] raw value:',
+        JSON.stringify(tasksOutput)?.slice(0, 1000),
+      )
+      throw new Error(
+        `getLazyTask("${task.flakeAttributePath}"): nix repl returned ` +
+          `${describeReplValue(tasksOutput)} instead of a task array`,
+      )
+    }
 
     return collectTasks(
       tasksOutput,
@@ -265,27 +310,67 @@ export async function getLazyTask(task: Task, ctx: any) {
       [],
     )[0]
   } finally {
-    console.timeEnd('nix getLazyTask')
+    endTimer()
   }
 }
 
-export async function callTaskGetOutput(task: Task, currentOutput: any = {}) {
-  try {
-    console.time('nix taskGetOutput')
+function describeReplValue(value: any): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  if (Array.isArray(value)) return `an array (length ${value.length})`
+  if (typeof value === 'string')
+    return `a string (length ${value.length}): ${JSON.stringify(
+      value.slice(0, 120),
+    )}`
+  return `a ${typeof value}`
+}
 
-    const output = await nixEval(
-      `
+// On a nix evaluation failure while lazily evaluating a task or its getOutput,
+// report which dependency outputs were null in the context. A null dependency
+// output that gets dereferenced (deps.<name>.output.<field>) is the usual cause
+// of "expected a set but found null". An output is null when the dependency
+// produced no output and wasn't (re)run in this invocation — under --only-tags
+// it is fetched via its fetchOutput hook, which can return nothing (or it
+// defines none), so the output is absent even though the dependency "ran".
+function logNullContextDeps(attrPath: string, ctx: any) {
+  const deps = ctx?.deps
+  if (deps == null || typeof deps !== 'object') return
+  const nullDeps = Object.keys(deps).filter(
+    depKey => deps[depKey] != null && deps[depKey].output === null,
+  )
+  if (nullDeps.length === 0) return
+  console.error(
+    `[nix-task] "${attrPath}" was evaluated with null outputs for these ` +
+      `dependencies: ${nullDeps.join(', ')}. If the nix error above is ` +
+      `"expected a set but found null", one of these is being dereferenced. ` +
+      `A dependency output is null when that task produced no output and was ` +
+      `not (re)run in this invocation (e.g. fetched via fetchOutput under ` +
+      `--only-tags, which returned nothing).`,
+  )
+}
+
+export async function callTaskGetOutput(task: Task, currentOutput: any = {}) {
+  const endTimer = startNixTimer('nix taskGetOutput')
+  try {
+    let output
+    try {
+      output = await nixEval(
+        `
       __toJSON (${
         task.flakeAttributePath
       }.getOutput (builtins.fromJSON ${JSON.stringify(
-        JSON.stringify(currentOutput ?? {}),
-      )}))
+          JSON.stringify(currentOutput ?? {}),
+        )}))
     `,
-    )
+      )
+    } catch (ex) {
+      logNullContextDeps(task.flakeAttributePath, currentOutput)
+      throw ex
+    }
 
     return output
   } finally {
-    console.timeEnd('nix taskGetOutput')
+    endTimer()
   }
 }
 

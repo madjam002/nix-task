@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     utils.url = "github:gytis-ivaskevicius/flake-utils-plus";
-    nix-task.url = "github:madjam002/nix-task/67bc5befc4959ea8987964f50ffb668be97bc45c";
+    nix-task.url = "path:../../";
     nix-task.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -188,6 +188,16 @@
                     deps = {
                       inherit prerequisites;
                     };
+                    # produce an output so kubernetes_cluster's mkTaskOutput
+                    # getOutput can read `deps.infrastructure.output`. Emit it both
+                    # when run normally and when its output is fetched under
+                    # --only-tags, so both paths make the output available.
+                    run = ''
+                      taskSetOutput '{"ready":true}'
+                    '';
+                    fetchOutput = ''
+                      taskSetOutput '{"ready":true}'
+                    '';
                   };
                   resources = nix-task.lib.mkTask {
                     stableId = "infra/kubernetes_cluster/resources";

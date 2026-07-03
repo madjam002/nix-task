@@ -20,8 +20,16 @@ export default async function buildLazyContextForTask(
     const _dep = task.deps[depKey]
 
     if (_dep?.__type === 'task' && _dep?.id != null) {
-      // dep is a reference to another task, fetch outputs and artifacts
+      // dep is a reference to another task, fetch outputs and artifacts.
+      //
+      // When a dependency produced no output we intentionally leave it ABSENT
+      // from the context (rather than setting `output: null`). Flakes signal an
+      // optional dependency output with `deps.<name>.output or <default>`, and
+      // nix's `or` only falls back on a *missing* attribute — not on a null
+      // value. Setting `output: null` here would defeat that idiom and turn
+      // `(deps.x.output or {}) // {…}` into "expected a set but found null".
       const dep = _dep as Task
+
       const depArtifactsDirName = findFileOrDirectoryForTask(
         dep.id,
         artifactDirectories,
@@ -42,14 +50,17 @@ export default async function buildLazyContextForTask(
           const output = JSON.parse(outputRaw)
           if (!depsContext[depKey]) depsContext[depKey] = {}
           depsContext[depKey].output = output
-        } catch (ex) {
-          // throw new Error(
-          //   'Error reading output for dependency ' +
-          //     depKey +
-          //     ' from ' +
-          //     outputFilePath +
-          //     ', have the dependency tasks run successfully?',
-          // )
+        } catch (ex: any) {
+          // Previously swallowed silently. The dependency's output file exists
+          // but couldn't be read/parsed (e.g. a partial read while another task
+          // was mid-write under -J). Surface it so it's diagnosable instead of
+          // silently leaving the output absent.
+          console.error(
+            `[nix-task] warning: could not load output for dependency "${depKey}" ` +
+              `(task ${dep.id?.slice(0, 12)}) from ${depOutFile}: ${
+                ex?.message ?? ex
+              }. Its output will be absent from the lazy context.`,
+          )
         }
       }
 

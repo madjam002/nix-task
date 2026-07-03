@@ -78,17 +78,33 @@ export async function startNixRepl() {
       // console.log('Nix repl started')
 
       try {
+        let markerCounter = 0
+
         while (true) {
           const action = yield take(commandQueue)
 
           const doneChannel = channel(buffers.none() as any)
+
+          // nix repl streams a result followed by an extra blank line, and its
+          // output arrives in arbitrarily-split chunks. Detecting completion by
+          // "a chunk ended in a newline" is unreliable: a stray trailing newline
+          // from the previous command can land in this command's listening window
+          // and complete it early. That cascades — every subsequent command then
+          // receives the previous command's (or a null) result, which downstream
+          // crashes collectTasks with "TypeError: i is not iterable" or silently
+          // runs a task with the wrong data. Instead we append a unique marker
+          // expression after each command and only treat it as complete once the
+          // marker's evaluated output appears, which the repl can only print once
+          // it has finished evaluating the real command.
+          const marker = `@@NIX_TASK_REPL_DONE_${markerCounter++}@@`
+          const quotedMarker = JSON.stringify(marker)
 
           let responseOut = ''
           let responseErr = ''
 
           const stdoutListener = (data: any) => {
             responseOut += data.toString()
-            if (data.toString().endsWith('\n')) {
+            if (responseOut.includes(marker)) {
               doneChannel.put(true)
             }
           }
@@ -104,12 +120,55 @@ export async function startNixRepl() {
 
             // console.log('--->', action.command)
             repl.stdin.write(action.command.replaceAll('\n', ' ') + '\n') // remove new lines from input command as it will cause command to be sent to REPL
+            // evaluate the marker on its own line so its output flushes strictly
+            // after the command's output, giving a reliable completion signal
+            repl.stdin.write(quotedMarker + '\n')
 
             yield take(doneChannel)
 
             currentEnvContext = process.env
 
-            let output: any = stripAnsi(responseOut)
+            // drop everything from the marker onwards to recover just the
+            // command's own output
+            const cleaned = stripAnsi(responseOut)
+            const markerIndex = cleaned.indexOf(quotedMarker)
+            const rawExtracted =
+              markerIndex >= 0 ? cleaned.slice(0, markerIndex) : cleaned
+
+            // Framing-integrity check — applies to EVERY command (getTasks,
+            // getLazyTask AND getOutput), so a misframe is caught wherever it
+            // happens. Two invariants must hold:
+            //   1. this command's own completion marker is present in stdout;
+            //   2. no OTHER command's marker appears before it — a foreign
+            //      marker in the extracted output means a previous command's
+            //      result bled into this one.
+            // A violation is the root cause of both "TypeError: i is not
+            // iterable" (getLazyTask) and spurious null outputs (getOutput).
+            // Always log the full exchange so it's diagnosable from CI logs.
+            const MARKER_PREFIX = '@@NIX_TASK_REPL_DONE_'
+            if (markerIndex < 0 || rawExtracted.includes(MARKER_PREFIX)) {
+              console.error(
+                `[nix-task] repl framing corruption: ${
+                  markerIndex < 0
+                    ? "this command's completion marker was not found in stdout"
+                    : "another command's marker leaked into this command's output"
+                } (marker=${marker}, rawStdoutLen=${responseOut.length}, ` +
+                  `stderrLen=${responseErr.length}). The repl output framed ` +
+                  `incorrectly; the parsed result for this command is unreliable. ` +
+                  `Full exchange follows:`,
+              )
+              console.error(
+                `[nix-task]   command: ${action.command.replaceAll('\n', ' ')}`,
+              )
+              console.error(
+                `[nix-task]   raw stdout: ${JSON.stringify(cleaned)}`,
+              )
+              console.error(
+                `[nix-task]   raw stderr: ${JSON.stringify(responseErr)}`,
+              )
+            }
+
+            let output: any = rawExtracted
             try {
               output = fromJSON(fromJSON(output))
             } catch (ex) {

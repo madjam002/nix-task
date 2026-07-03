@@ -161,33 +161,17 @@ export default async function run(
           )
         ) {
           if (options.debug) {
-            if (isOutputOnly) {
-              console.log(
-                'tasks not finished for task',
-                _idToRun,
-                task.flakeAttributePath,
+            console.log(
+              'waiting on dependencies for task',
+              _idToRun,
+              task.flakeAttributePath,
+              pendingDependenciesForTask(
+                task,
                 taskIdsToRun,
-                (task as TaskWithOriginalDeps).originalDeps?.filter(
-                  dep =>
-                    !(taskIdsToRun.includes(`OUTPUT:${dep.id}`)
-                      ? taskDoneStatus[`OUTPUT:${dep.id}`] === true
-                      : true),
-                ),
-              )
-            } else {
-              console.log(
-                'tasks not finished for task',
-                _idToRun,
-                task.flakeAttributePath,
-                taskIdsToRun,
-                task.allDiscoveredDeps.filter(
-                  dep =>
-                    !(taskIdsToRun.includes(dep.id)
-                      ? taskDoneStatus[dep.id] === true
-                      : true),
-                ),
-              )
-            }
+                taskDoneStatus,
+                isOutputOnly,
+              ).map(dep => dep.flakeAttributePath),
+            )
           }
           await new Promise(resolve => {
             const handler = () => {
@@ -361,25 +345,59 @@ function calculateBatchedRunOrder(
   return runOrder
 }
 
+function pendingDependenciesForTask(
+  task: TaskWithOriginalDeps,
+  taskIdsToRun: string[],
+  doneStatus: { [taskId: string]: boolean },
+  isOutputOnly: boolean,
+): Task[] {
+  // A dependency may be queued as a full run (`dep.id`) and/or an output-only
+  // fetch (`OUTPUT:dep.id`). We must wait for the right one, otherwise a
+  // dependent builds its lazy context (reading dependency output files) before
+  // those files are written and the dependency output comes back null.
+  //
+  // Which variant to wait for depends on what this task needs:
+  //  - A normal task needs the dependency's *run* to have completed, so it
+  //    prefers the full variant.
+  //  - An output-only task only needs the dependency's *output*, produced by the
+  //    OUTPUT: variant. This preference matters in reverse/destroy order, where
+  //    both variants are queued: the OUTPUT: fetch is deliberately scheduled
+  //    early (before the full run), so an output-only task must wait on it and
+  //    not on the full run — which runs afterwards and would otherwise deadlock.
+  //
+  // If neither variant is queued the dependency isn't part of this run and its
+  // output is assumed already available, so it doesn't block.
+  const isDepSatisfied = (depId: string) => {
+    const preferredOrder = isOutputOnly
+      ? [`OUTPUT:${depId}`, depId]
+      : [depId, `OUTPUT:${depId}`]
+    for (const id of preferredOrder) {
+      if (taskIdsToRun.includes(id)) return doneStatus[id] === true
+    }
+    return true
+  }
+
+  // An output-only task still needs its real dependencies' outputs to
+  // fetch/compute its own output, regardless of run direction. In reverse mode
+  // `allDiscoveredDeps` is rewritten to the task's dependents, so the real
+  // dependencies are kept in `originalDeps`.
+  const deps = isOutputOnly
+    ? task.originalDeps ?? task.allDiscoveredDeps
+    : task.allDiscoveredDeps
+
+  return deps.filter(dep => !isDepSatisfied(dep.id))
+}
+
 function areAllDependenciesSatisifiedForTask(
   task: TaskWithOriginalDeps,
   taskIdsToRun: string[],
   doneStatus: { [taskId: string]: boolean },
   isOutputOnly: boolean,
 ) {
-  if (isOutputOnly) {
-    return (
-      task.originalDeps?.every(dep =>
-        taskIdsToRun.includes(`OUTPUT:${dep.id}`)
-          ? doneStatus[`OUTPUT:${dep.id}`] === true
-          : true,
-      ) ?? true
-    )
-  } else {
-    return task.allDiscoveredDeps.every(dep =>
-      taskIdsToRun.includes(dep.id) ? doneStatus[dep.id] === true : true,
-    )
-  }
+  return (
+    pendingDependenciesForTask(task, taskIdsToRun, doneStatus, isOutputOnly)
+      .length === 0
+  )
 }
 
 let lastTaskIdToBeLogged: string | null = null
@@ -605,10 +623,18 @@ function* runTask(
       outputRef.current != null &&
       (opts?.customFunctionName == null || opts.isOutputOnly === true)
     ) {
-      // write/overwrite new out.json file
-      yield call(() =>
-        fs.writeFile(outJSONFile, JSON.stringify(outputRef.current, null, 2)),
-      )
+      // write/overwrite new out.json file.
+      // Write to a temp file then rename: rename is atomic on the same
+      // filesystem, so a concurrently-running task's buildLazyContextForTask can
+      // never observe a half-written (unparseable) output file under -J.
+      yield call(async () => {
+        const tmpFile = `${outJSONFile}.tmp-${process.pid}-${task.id.slice(
+          0,
+          8,
+        )}`
+        await fs.writeFile(tmpFile, JSON.stringify(outputRef.current, null, 2))
+        await fs.rename(tmpFile, outJSONFile)
+      })
       // clean up any old out.json files for this task ID that might use obsolete name prefixes
       // TODO!
     }
